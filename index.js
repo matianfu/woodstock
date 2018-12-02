@@ -53,7 +53,17 @@ socket.on('connect', () => {
         'interface': 'org.freedesktop.DBus',
         member: 'Hello',
         type: 1
+      }, () => {
+/**
+        invoke({
+          path: '/
+        })
+*/
+
+        
       })
+
+      
 
     } else {
       // error

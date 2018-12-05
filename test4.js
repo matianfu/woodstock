@@ -1,3 +1,5 @@
+const path = require('path')
+
 const DBus = require('./lib/dbus')
 const { DBusObject } = require('./lib/dbus-object')
 const {
@@ -7,8 +9,13 @@ const {
   STRUCT, ARRAY, VARIANT, DICT_ENTRY
 } = require('./lib/dbus-types')
 
+
 const DBusProperties = require('./lib/dbus-properties')
 const LEAdvertisement1 = require('./bluez/le-advertisement1')
+const GattService1 = require('./bluez/gatt-service1')
+const GattDescriptor1 = require('./bluez/gatt-descriptor1')
+const GattCharacteristic1 = require('./bluez/gatt-characteristic1')
+
 const dbus = new DBus()
 
 dbus.on('connect', () => {
@@ -25,14 +32,19 @@ dbus.on('connect', () => {
   })
 */
 
-  let advpath = '/com/wisnuc/bluetooth/le/advertisement0'
-  let dobj = dbus.createDBusObject()
-  dobj.addInterface(new DBusProperties())
-  dobj.addInterface(new LEAdvertisement1({
-    Type: 'peripheral',
-    LocalName: 'hello-world',
-  }))
-  dbus.attach(advpath, dobj)
+  let advpath = '/com/winas/bluetooth/le/advertisement0'
+  let advObj = dbus.createDBusObject()
+    .addInterface(new DBusProperties())
+    .addInterface(new LEAdvertisement1({
+      Type: 'peripheral',
+      LocalName: 'hello-world',
+      ServiceUUIDs: ['180D', '180F'],
+      ManufacturerData: [
+        [0xffff, ['ay', [0x55, 0x33, 0x55, 0x55]]]
+      ],
+      IncludeTxPower: true
+    }))
+    .attach(advpath)
 
   dbus.driver.invoke({
     destination: 'org.bluez',
@@ -46,50 +58,7 @@ dbus.on('connect', () => {
     ]
   })
 
-
-/**
-  dbus.createObject(advPath, [{
-    name: 'org.bluez.LEAdvertisement1',
-    Type: 'peripheral',
-    LocalName: 'hello'
-  }, {
-    name: 'org.freedesktop.DBus.Properties',
-    GetAll: function (ifaceName, callback) {
-      let err, data
-      if (ifaceName.value === 'org.bluez.LEAdvertisement1') {
-        data = new ARRAY([
-          new DICT_ENTRY([
-            new STRING('Type'), 
-            new VARIANT(new STRING('peripheral'))
-          ]),
-          new DICT_ENTRY([
-            new STRING('LocalName'),
-            new VARIANT(new STRING('winas02'))
-          ]) 
-        ], 'a{sv}')
-      } else {
-        err = new Error() 
-      }
-      process.nextTick(() => callback(err, [data]))
-    }
-  }])
-*/
-
-/**
-  dbus.driver.invoke({
-    destination: 'org.bluez',
-    path: '/org/bluez/hci0',
-    'interface': 'org.bluez.LEAdvertisingManager1',
-    member: 'RegisterAdvertisement',
-    signature: 'oa{sv}',
-    body: [
-      new OBJECT_PATH(advPath),
-      new ARRAY('a{sv}')
-    ]
-  })
-*/
-
-/**
+  /**
 -> /com/example
   |   - org.freedesktop.DBus.ObjectManager
   |
@@ -118,27 +87,20 @@ dbus.on('connect', () => {
         - org.bluez.GattCharacteristic1
 */
 
-/**
-dbus.createObject()
-  .addInterface('org.freedesktop.DBus.ObjectManager')
-  .addChild(
-  )
-*/
+  let s0Path = '/com/winas/bluetooth/le/gatt/service0'
+  let s0Obj = dbus.createDBusObject()
+    .addInterface(new DBusProperties())
+    .addInterface(new GattService1({
+    }))
+    .attach(s0Path)
 
-  let gattPath = '/com/wisnuc/bluetooth/le/gatt/service0'
-  // dbus.createObject(
+  let s0char0Path = path.join(s0Path, 'char0')
+  let s0char0Obj = dbus.createDBusObject()
+    .addInterface(new DBusProperties())
+    .addInterface(new GattCharacteristic1({
+    }))
+    .attach(s0char0Path)
 
-/**
-  dbus.driver.invoke({
-    destination: 'org.freedesktop.DBus',
-    path: '/org/freedesktop/DBus',
-    'interface': 'org.freedesktop.DBus.Introspectable',
-    member: 'Introspect',
-  }, (err, body) => {
-//    console.log(body[0].value)
-  })
-*/
+  console.dir(dbus.root, { depth: 200 })
+ 
 })
-
-
-

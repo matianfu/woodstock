@@ -5,7 +5,7 @@ const {
   BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64, DOUBLE, UNIX_FD,
   STRING, OBJECT_PATH, SIGNATURE,
   STRUCT, ARRAY, VARIANT, DICT_ENTRY
-} = require('./lib/types')
+} = require('./lib/dbus-types')
 
 const dbus = new DBus()
 

@@ -3,7 +3,6 @@ const xml2js = require('xml2js')
 const DBusInterface = require('../lib/dbus-interface')
 const DBusInterfaceDefinition = require('../lib/dbus-interface-definition')
 
-
 class LEAdvertisement1 extends DBusInterface {
   constructor (props) {  
     super()

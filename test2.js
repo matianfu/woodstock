@@ -64,6 +64,45 @@ dbus.on('connect', () => {
   })
 
 /**
+-> /com/example
+  |   - org.freedesktop.DBus.ObjectManager
+  |
+  -> /com/example/service0
+  | |   - org.freedesktop.DBus.Properties
+  | |   - org.bluez.GattService1
+  | |
+  | -> /com/example/service0/char0
+  | |     - org.freedesktop.DBus.Properties
+  | |     - org.bluez.GattCharacteristic1
+  | |
+  | -> /com/example/service0/char1
+  |   |   - org.freedesktop.DBus.Properties
+  |   |   - org.bluez.GattCharacteristic1
+  |   |
+  |   -> /com/example/service0/char1/desc0
+  |       - org.freedesktop.DBus.Properties
+  |       - org.bluez.GattDescriptor1
+  |
+  -> /com/example/service1
+    |   - org.freedesktop.DBus.Properties
+    |   - org.bluez.GattService1
+    |
+    -> /com/example/service1/char0
+        - org.freedesktop.DBus.Properties
+        - org.bluez.GattCharacteristic1
+*/
+
+/**
+dbus.createObject()
+  .addInterface('org.freedesktop.DBus.ObjectManager')
+  .addChild(
+  )
+*/
+
+  let gattPath = '/com/wisnuc/bluetooth/le/gatt/service0'
+  // dbus.createObject(
+
+/**
   dbus.driver.invoke({
     destination: 'org.freedesktop.DBus',
     path: '/org/freedesktop/DBus',
@@ -74,4 +113,6 @@ dbus.on('connect', () => {
   })
 */
 })
+
+
 

@@ -7,12 +7,13 @@ class LEAdvertisement1 extends DBusInterface {
   constructor (props) {  
     super()
     Object.assign(this, props)
+
     this.Type = props.Type || 'peripheral'
   }
 }
 
 /**
-code from test/example-advertisement in Bluez-5.48
+code from test/example-advertisement in bluez-5.48
 
 60         properties['Type'] = self.ad_type
 61         if self.service_uuids is not None:
@@ -33,7 +34,8 @@ code from test/example-advertisement in Bluez-5.48
 76             properties['IncludeTxPower'] = dbus.Boolean(self.include_tx_power)
 */
 
-// how to mark no-reply ???
+// how to mark no-reply ??? TODO
+
 const xml = `\
 <interface name = "org.bluez.LEAdvertisement1">
   <method name="Release" />

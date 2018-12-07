@@ -11,6 +11,7 @@ const {
 
 
 const DBusProperties = require('./lib/dbus-properties')
+const DBusObjectManager = require('./lib/dbus-object-manager')
 const LEAdvertisement1 = require('./bluez/le-advertisement1')
 const GattService1 = require('./bluez/gatt-service1')
 const GattDescriptor1 = require('./bluez/gatt-descriptor1')
@@ -19,32 +20,28 @@ const GattCharacteristic1 = require('./bluez/gatt-characteristic1')
 const dbus = new DBus()
 
 dbus.on('connect', () => {
-/**
-  trigger an error
-
-  dbus.driver.invoke({
-    destination: 'org.freedesktop.DBus',
-    path: '/org/freedesktop/DBus',
-    'interface': 'org.freedesktop.DBus.ObjectManager',
-    member: 'GetManagedObjects',
-  }, (err, body) => {
-    console.log(err || body)
+  dbus.watch({ sender: 'org.bluez', path: '/org/bluez' }, err => {
+    if (err) {
+      console.log('failed to listen bluez')
+    } else {
+      console.log('listening to bluez')
+    }
   })
-*/
-
-  let advpath = '/com/winas/bluetooth/le/advertisement0'
+  
+  // let advpath = '/org/bluez/LEAdvertisement1/adv0'
   let advObj = dbus.createDBusObject()
     .addInterface(new DBusProperties())
+    .addInterface(new DBusObjectManager())
     .addInterface(new LEAdvertisement1({
       Type: 'peripheral',
-      LocalName: 'hello-world',
+      LocalName: 'a-better-tomorrow',
       ServiceUUIDs: ['180D', '180F'],
       ManufacturerData: [
         [0xffff, ['ay', [0x55, 0x33, 0x55, 0x55]]]
       ],
       IncludeTxPower: true
     }))
-    .attach(advpath)
+    .attach('/org/bluez/LEAdvertisement1/advertisement0')
 
   dbus.driver.invoke({
     destination: 'org.bluez',
@@ -53,7 +50,7 @@ dbus.on('connect', () => {
     member: 'RegisterAdvertisement',
     signature: 'oa{sv}',
     body: [
-      new OBJECT_PATH(advpath),
+      new OBJECT_PATH(advObj.objectPath()),
       new ARRAY('a{sv}')
     ]
   })
@@ -87,20 +84,50 @@ dbus.on('connect', () => {
         - org.bluez.GattCharacteristic1
 */
 
-  let s0Path = '/com/winas/bluetooth/le/gatt/service0'
-  let s0Obj = dbus.createDBusObject()
+  let gatt = dbus.createDBusObject()
+    .addInterface(new DBusObjectManager())
+    .attach('/org/bluez/GattService1')
+
+  let s0 = dbus.createDBusObject('service0')
     .addInterface(new DBusProperties())
     .addInterface(new GattService1({
+      UUID: '0000180d-0000-1000-8000-00805f9b34fb',
+      Primary: true,
     }))
-    .attach(s0Path)
-
-  let s0char0Path = path.join(s0Path, 'char0')
-  let s0char0Obj = dbus.createDBusObject()
-    .addInterface(new DBusProperties())
-    .addInterface(new GattCharacteristic1({
-    }))
-    .attach(s0char0Path)
+    .addChild(dbus.createDBusObject('char0')
+      .addInterface(new DBusProperties())
+      .addInterface(new GattCharacteristic1({
+        UUID: '00002a37-0000-1000-8000-00805f9b34fb',
+        Flags: ['notify'],
+      })))
+    .addChild(dbus.createDBusObject('char1')
+      .addInterface(new DBusProperties())
+      .addInterface(new GattCharacteristic1({
+        UUID: '00002a38-0000-1000-8000-00805f9b34fb',
+        Flags: ['read'],
+      })))
+    .addChild(dbus.createDBusObject('char2')
+      .addInterface(new DBusProperties())
+      .addInterface(new GattCharacteristic1({
+        UUID: '00002a39-0000-1000-8000-00805f9b34fb',
+        Flags: ['write'],
+      })))
+  
+  gatt.addChild(s0)
 
   console.dir(dbus.root, { depth: 200 })
- 
+
+  dbus.driver.invoke({
+    destination: 'org.bluez',
+    path: '/org/bluez/hci0',
+    'interface': 'org.bluez.GattManager1',
+    member: 'RegisterApplication',
+    signature: 'oa{sv}',
+    body: [
+      new OBJECT_PATH(gatt.objectPath()),
+      new ARRAY('a{sv}')
+    ]
+  }, (err, data) => {
+    console.log('register application', err, data)
+  })  
 })

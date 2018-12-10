@@ -17,6 +17,8 @@ const GattService1 = require('./bluez/gatt-service1')
 const GattDescriptor1 = require('./bluez/gatt-descriptor1')
 const GattCharacteristic1 = require('./bluez/gatt-characteristic1')
 
+const GattSerialService = require('./bluez/gatt-serial-service')
+
 const dbus = new DBus()
 
 dbus.on('connect', () => {
@@ -55,6 +57,8 @@ dbus.on('connect', () => {
     ]
   })
 
+  return
+
   /**
 -> /com/example
   |   - org.freedesktop.DBus.ObjectManager
@@ -90,32 +94,32 @@ dbus.on('connect', () => {
 
   let s0 = dbus.createDBusObject('service0')
     .addInterface(new DBusProperties())
-    .addInterface(new GattService1({
-      UUID: '0000180d-0000-1000-8000-00805f9b34fb',
+    .addInterface(new (GattService1(Object))({
+      UUID: '0000180d-0000-1000-8000-00805f9b34fc',
       Primary: true,
     }))
     .addChild(dbus.createDBusObject('char0')
       .addInterface(new DBusProperties())
       .addInterface(new GattCharacteristic1({
-        UUID: '00002a37-0000-1000-8000-00805f9b34fb',
-        Flags: ['notify'],
+        UUID: '00002a37-0000-1000-8000-00805f9b34fc',
+        Flags: ['indicate'],
       })))
     .addChild(dbus.createDBusObject('char1')
       .addInterface(new DBusProperties())
       .addInterface(new GattCharacteristic1({
-        UUID: '00002a38-0000-1000-8000-00805f9b34fb',
+        UUID: '00002a38-0000-1000-8000-00805f9b34fc',
         Flags: ['read'],
       })))
     .addChild(dbus.createDBusObject('char2')
       .addInterface(new DBusProperties())
       .addInterface(new GattCharacteristic1({
-        UUID: '00002a39-0000-1000-8000-00805f9b34fb',
+        UUID: '00002a39-0000-1000-8000-00805f9b34fc',
         Flags: ['write'],
       })))
   
   gatt.addChild(s0)
 
-  console.dir(dbus.root, { depth: 200 })
+  // console.dir(dbus.root, { depth: 200 })
 
   dbus.driver.invoke({
     destination: 'org.bluez',

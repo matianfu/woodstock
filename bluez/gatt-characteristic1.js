@@ -59,6 +59,10 @@ class GattCharacteristic1 extends DBusInterface {
   WriteValue () {
   }
 
+  Confirm (a1, a2, a3) {
+    console.log('Confirm', a1, a2, a3)
+  }
+
 /**
 { type: 'SIGNAL',
   flags: { noReply: true },
@@ -105,7 +109,7 @@ class GattCharacteristic1 extends DBusInterface {
           new ARRAY('as')
         ]
       })
-    }, 128)
+    }, 2048)
   } 
 
   StopNotify (callback) {

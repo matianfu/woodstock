@@ -1,7 +1,4 @@
-const EventEmitter = require('events')
-
-const DBusInterfaceDefinition = require('../lib/dbus-interface-definition')
-const parseXml = require('../lib/parse-xml')
+const DBusInterface = require('../lib/dbus-interface')
 
 const xml = `\
 <interface name = "org.bluez.LEAdvertisement1">
@@ -16,18 +13,4 @@ const xml = `\
 </interface>
 `
 
-const definition = new DBusInterfaceDefinition(parseXml(xml).interface)
-
-class LEAdvertisement1 extends EventEmitter {
-  constructor (props) {  
-    super()
-    Object.assign(this, props)
-  }
-}
-
-LEAdvertisement1.prototype.definition = definition
-LEAdvertisement1.prototype.name = definition.name
-
-module.exports = LEAdvertisement1
-
-
+module.exports = DBusInterface(xml)

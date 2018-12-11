@@ -43,8 +43,9 @@ dbus.on('connect', () => {
       ],
       IncludeTxPower: true
     }))
-    .attach('/org/bluez/LEAdvertisement1/advertisement0')
+    // .attach('/org/bluez/LEAdvertisement1/advertisement0')
 
+  dbus.attach('/org/bluez/LEAdvertisement1/advertisement0', advObj)
   dbus.driver.invoke({
     destination: 'org.bluez',
     path: '/org/bluez/hci0',
@@ -56,7 +57,6 @@ dbus.on('connect', () => {
       new ARRAY('a{sv}')
     ]
   })
-
   return
 
   /**

@@ -51,16 +51,10 @@ const xml = `\
 const definition = new DBusInterfaceDefinition(parseXml(xml).interface)
 
 const GattCharacteristic1 = (Base = Object) => {
-  class GattCharacteristic1 extends Base {
-    constructor (props) {
-      super()
-      this.UUID = props.UUID
-    }
-  }
+  class GattCharacteristic1 extends Base { }
 
   let proto = GattCharacteristic1.prototype
-
-  proto.definitin = definition
+  proto.definition = definition
   proto.name = definition.name
   Object.defineProperty(proto, 'Service', {
     get () {

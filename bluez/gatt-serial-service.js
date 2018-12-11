@@ -1,13 +1,15 @@
 const EventEmitter = require('events')
 
+const DBusObject = require('../lib/dbus-object')
+const DBusProperties = require('../lib/dbus-properties')
+const DBusObjectManager = require('../lib/dbus-object-manager')
 const GattService1 = require('./gatt-service1')
 const GattCharacteristic1 = require('./gatt-characteristic1-2')
+const { OBJECT_PATH, ARRAY } = require('../lib/dbus-types')
 
-/**
-*/
-class GattSerialCharacteristic0 extends GattCharacteristic1(EventEmitter) {
+class Char0 extends GattCharacteristic1(EventEmitter) {
 
-  constructor (props) {
+  constructor () {
     super ()
     this.UUID = '80000001-0182-406c-9221-0a6680bd0943'
     this.Flags = ['write', 'indicate']
@@ -30,34 +32,34 @@ class GattSerialCharacteristic0 extends GattCharacteristic1(EventEmitter) {
   } 
 }
 
-class GattSerialService extends EventEmitter {
+class GattSerialService extends DBusObject {
 
-  constructor (request) {
-    super ()
-
+  constructor (name, primary) {
+    super (name)
     this.sessionId = 0
-
     this.started = false
     this.pending = false
     this.incoming = ''
     this.outgoing = ''
 
-    let pipe = ''
-    pipe.on('startNotify', () => this.start())
-    pipe.on('stopNotify', () => this.stop())
-    pipe.on('confirm', () => this.handleConfirm())
-    pipe.on('writeValue', value => this.receive(value))
-    this.pipe = pipe
-
-    this.serviceItf = new GattService1({
+    this.addInterface(new DBusProperties())
+    this.addInterface(new DBusObjectManager())
+    this.addInterface(new GattService1({
       UUID: '80000000-0182-406c-9221-0a6680bd0943',
-      Primary: !!opts.Primary
-    })
+      Primary: !!primary
+    }))
 
-    this.charasteristicItf = new GattCharacteristic1({
-    })
+    let pipeIface = new Char0()
+      .on('startNotify', () => this.start())
+      .on('stopNotify', () => this.stop())
+      .on('confirm', () => this.handleConfirm())
+      .on('writeValue', value => this.receive(value))
 
-     
+    let pipeObj = new DBusObject('char0')
+      .addInterface(new DBusProperties())
+      .addInterface(pipeIface)
+
+    this.addChild(pipeObj)
   }
 
   start () {
@@ -115,10 +117,31 @@ class GattSerialService extends EventEmitter {
     }
   }
 
-  attach (dobj) {
-    dobj.addInterface(this.serviceInterface)
+  register () {
+
+    console.log(' ====================== ')
+    console.log(this.objectPath())
+
+    this.dbus.driver.invoke({
+      destination: 'org.bluez',
+      path: '/org/bluez/hci0',
+      'interface': 'org.bluez.GattManager1',
+      member: 'RegisterApplication',
+      signature: 'oa{sv}',
+      body: [
+        new OBJECT_PATH(this.objectPath()),
+        new ARRAY('a{sv}')
+      ]
+    }, (err, data) => {
+      console.log('register application', err, data)
+    }) 
   }
 
-  detach (dobj) {
+  mounted () {
+    super.mounted()
+    console.log('hello ======================== world')
+    this.register()
   }
 }
+
+module.exports = GattSerialService

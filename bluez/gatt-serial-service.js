@@ -6,87 +6,9 @@ const DBusObject = require('../lib/dbus-object')
 const DBusProperties = require('../lib/dbus-properties')
 const DBusObjectManager = require('../lib/dbus-object-manager')
 const GattService1 = require('./gatt-service1')
-const GattCharacteristic1 = require('./gatt-characteristic1-2')
-const GattWriteCharacteristic = require('./gatt-write-characteristic')
+const ReadNotifyChar = require('./gatt-read-notify-char')
+const WriteReadChar = require('./gatt-write-read-char')
 const { OBJECT_PATH, ARRAY } = require('../lib/dbus-types')
-
-class Char0 extends GattCharacteristic1(EventEmitter) {
-
-  constructor () {
-    super ()
-    this.UUID = '80000001-0182-406c-9221-0a6680bd0943'
-    this.Flags = ['indicate']
-  }
-
-  StartNotify () {
-    this.emit('StartNotify')
-  }
-
-  StopNotify (m) {
-    this.emit('StopNotify')
-  }
-
-  Confirm (m) {
-    this.emit('Confirm')
-  }
-}
-
-class Char1 extends GattCharacteristic1(EventEmitter) {
-
-  constructor (opts) {
-    super()
-    this.UUID = '80000002-0182-406c-9221-0a6680bd0943'
-    this.Flags = ['read', 'write']
-
-
-
-/**
-  cache {
-    VAL: original TYPE-ed value
-    opt: parsed
-  }
-*/
-    
-  }
-
-  // convert TYPE opt to JS object
-  parse (opt) {
-    return opt.eval().reduce((o, [name, kv]) => Object.assign(o, { [name]: kv[1] }), {})
-  }
-
-  /*
-  Possible options: 
-    "offset": uint16 offset
-    "device": Object Device (Server only)
-
-  Possible Errors: org.bluez.Error.Failed
-    org.bluez.Error.InProgress
-    org.bluez.Error.NotPermitted
-    org.bluez.Error.NotAuthorized
-    org.bluez.Error.InvalidOffset
-    org.bluez.Error.NotSupported
-  */
-  ReadValue (opt, callback) {
-    opt = this.parse(opt)
-    if (this.cache) {
-      if (this.cache.opt.device === opt.device) {
-        return callback(null, this.cache.VAL)
-      } else {
-        this.cache = null
-      }
-    }
-    callback(null, new ARRAY('ay'))
-  }
-
-  // value byte array
-  // option { offset, device, link }
-  WriteValue (val, opt, callback) {
-    val = val.eval()
-    opt = opt.eval().reduce((o, [name, kv]) => Object.assign(o, { [name]: kv[1] }), {})
-
-    console.log('WriteValue', val.length, Buffer.from(val).toString(), opt)
-  }
-}
 
 class GattSerialService extends DBusObject {
 
@@ -105,10 +27,10 @@ class GattSerialService extends DBusObject {
       Primary: !!primary
     }))
 
-    this.rxIface = new Char0()
-      .on('StartNotify', () => this.start())
-      .on('StopNotify', () => this.stop())
-      .on('Confirm', () => this.handleConfirm())
+    this.rxIface = new ReadNotifyChar({ 
+      UUID: '80000001-0182-406c-9221-0a6680bd0943',
+      indicate: true
+    })
 
     this.rxObj = new DBusObject('char0')
       .addInterface(new DBusProperties())
@@ -116,7 +38,7 @@ class GattSerialService extends DBusObject {
 
     this.addChild(this.rxObj)
 
-    this.txIface = new GattWriteCharacteristic({
+    this.txIface = new WriteReadChar({
       UUID: '80000002-0182-406c-9221-0a6680bd0943',
       readable: true
     })
@@ -128,70 +50,14 @@ class GattSerialService extends DBusObject {
     this.addChild(this.txObj)
 
     this.listener = this.listen.bind(this)
-  }
 
-  start () {
+    this.count = 0
 
-    console.log('start')
-
-    this.started = true
-    this.pending = false
-    this.incoming = ''
-    this.outgoing = ''
-    this.emit('Start', this.sessionId++)
-  }
-
-  stop () {
-
-    console.log('stop')
-
-    this.started = false
-    this.emit('Stop', this.sessionId) 
-  }
-
-  receive (value) {
-
-    console.log('receive', value)
-
-    if (!this.started) return
-    this.incoming += value 
-
-    while (this.incoming.indexOf('\n')) {
-      let idx = this.incoming.indexOf('\n')
-      let line = this.incoming.slice(0, idx)
-      this.incoming = this.incoming.slice(idx + 1)
-      try {
-        this.emit('data', JSON.parse(line))
-      } catch (e) {
-        // silent
-      }
-    }
-  }
-
-  handleConfirm () {
-    if (!this.started) return
-    this.pending = false
-    this.send()
-  }
-
-  _send (string) {
-    if (string) this.outgoing += string
-    if (this.waitingForConfirm) return
-    let payload = this.outgoing.slice(0, 20)
-    this.outgoing = this.outgoing.slice(20)
-    // TODO
-  }
-
-  // no callback ???
-  send (obj) {
-    if (!this.started) return
-    if (obj.sessionId !== this.sessionId) return
-    try {
-      let string = JSON.stringify(obj)
-      this.send(string)
-    } catch (e) {
-      console.log(e)
-    }
+    setInterval(() => {
+      let val = Buffer.alloc(4)
+      val.writeUInt32LE(this.count++)
+      this.rxIface.update(val)
+    }, 500)
   }
 
   register () {
@@ -199,14 +65,29 @@ class GattSerialService extends DBusObject {
       destination: 'org.bluez',
       path: '/org/bluez/hci0',
       'interface': 'org.bluez.GattManager1',
-      member: 'RegisterApplication',
-      signature: 'oa{sv}',
-      body: [
-        new OBJECT_PATH(this.objectPath()),
-        new ARRAY('a{sv}')
-      ]
+      member: 'UnregisterApplication',
+      signature: 'o',
+      body: [ new OBJECT_PATH(this.objectPath()) ]
     }, (err, data) => {
-      console.log('register application', err, data)
+      if (err) {
+        console.log('unregister application', err.code, err.message)
+      } else {
+        console.log('unregister application succeeded')
+      }
+
+      this.dbus.driver.invoke({
+        destination: 'org.bluez',
+        path: '/org/bluez/hci0',
+        'interface': 'org.bluez.GattManager1',
+        member: 'RegisterApplication',
+        signature: 'oa{sv}',
+        body: [
+          new OBJECT_PATH(this.objectPath()),
+          new ARRAY('a{sv}')
+        ]
+      }, (err, data) => {
+        console.log('register application', err, data)
+      }) 
     }) 
   }
 
@@ -219,7 +100,8 @@ class GattSerialService extends DBusObject {
   listen (m) {
     if (m.path === '/org/bluez/hci0' &&
       m.interface === 'org.bluez.Adapter1' &&
-      m.Powered === true) {
+      m.changed &&
+      m.changed.Powered === true) {
       this.register()
     }
   } 

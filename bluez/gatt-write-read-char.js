@@ -1,5 +1,5 @@
 const EventEmitter = require('events')
-const GattCharacteristic1 = require('./gatt-characteristic1-2')
+const GattCharacteristic1 = require('./gatt-characteristic1')
 const { ARRAY } = require('../lib/dbus-types')
 
 /**

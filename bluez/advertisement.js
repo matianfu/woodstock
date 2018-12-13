@@ -23,7 +23,6 @@ class Advertisement extends DBusObject {
   register () {
     console.log('register advertisement')
 
-/**
     this.dbus.driver.invoke({
       destination: 'org.bluez',
       path: '/org/bluez/hci0',
@@ -33,29 +32,28 @@ class Advertisement extends DBusObject {
       body: [
         new OBJECT_PATH(this.objectPath()),
       ]
-    })
-*/
-
-    this.dbus.driver.invoke({
-      destination: 'org.bluez',
-      path: '/org/bluez/hci0',
-      'interface': 'org.bluez.LEAdvertisingManager1',
-      member: 'RegisterAdvertisement',
-      signature: 'oa{sv}',
-      body: [
-        new OBJECT_PATH(this.objectPath()),
-        new ARRAY('a{sv}')
-      ]
-    }, err => {
-      console.log(err)
+    }, (err, data) => {
+      this.dbus.driver.invoke({
+        destination: 'org.bluez',
+        path: '/org/bluez/hci0',
+        'interface': 'org.bluez.LEAdvertisingManager1',
+        member: 'RegisterAdvertisement',
+        signature: 'oa{sv}',
+        body: [
+          new OBJECT_PATH(this.objectPath()),
+          new ARRAY('a{sv}')
+        ]
+      }, err => {
+        console.log(err)
+      })
     })
   }
 
   listen (m) {
-    // either power on or bluetooth restart
     if (m.path === '/org/bluez/hci0' &&
       m.interface === 'org.bluez.Adapter1' && 
-      m.Powered === true) {
+      m.changed &&
+      m.changed.Powered === true) {
       this.register()
     }
   }

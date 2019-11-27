@@ -5,15 +5,37 @@ const log = debug('dbus:types')
 const logm = debug('marshal')
 const logu = debug('unmarshal')
 
-let $width = 3
+const $width = 3
+const $more = () => $ = $ + ' '.repeat($width)
+const $less = () => $ = $.slice($width)
+
 let $ = ''
-let $more = () => $ = $ + ' '.repeat($width)
-let $less = () => $ = $.slice($width)
 
 const LITTLE = Buffer.from('l')[0]
 const BIG = Buffer.from('B')[0]
 
 /**
+This module defines all classes for DBus data types.
+
+DBus is a binary protocol. It has its own type system to encoding and decoding
+data. The following table lists all DBus data types.
+
+BYTE, INT, BOOLEAN, DOUBLE and UNIX_FD has fixed length. They are all derived
+from FIXED_TYPE.
+
+STRING, OBJECT_PATH, and SIGNATURE has variable length. They are all derived
+from STRING_LIKE_TYPE. 
+
+Both FIXED_TYPE and STRING_LIKE_TYPE is BASIC_TYPE, which is usually mentioned
+as primitive type in many programming languages.
+
+DBus also provides several container types.
+
+- ARRAY is a collection of data objects of the same type.
+- STRUCT is a container for data objects of different type, like a C struct.
+- DICT_ENTRY TODO
+- VARIANT is a container for data objects of any type.
+
 A TYPE object may or may not have a value.
 
 There are basic type and containr type. The basic type has fixed type and string-like type as its sub-type.
@@ -24,6 +46,7 @@ An object of basic type, or VARIANT type can be constructed with a value, or can
 
 An ARRAY, STRUCT, and DICT_ENTRY object can only be constructed as an empty object with signature. The elements can
 
+```
   TYPE                        size    align   construct
     BASIC_TYPE
       FIXED_TYPE
@@ -48,11 +71,9 @@ a       ARRAY                         4       m: string (sig) | TYPE[]
 (       STRUCT                        8       m: string (sig) | TYPE[]
 v       VARIANT                       1       m: string = 'v' | TYPE[] = [SIGNATURE, TYPE]
 {       DICT_ENTRY                    8       m: string (sig) | TYPE[] = [BASIC_TYPE, TYPE]
+```
 
-All TYPE has:
-
-All CONTAINER_TYPE has
-
+@module DBus Types
 */
 
 const basicTypeCodes = 'ybnqiuxtdsogh'.split('')
@@ -60,15 +81,68 @@ const basicTypeCodes = 'ybnqiuxtdsogh'.split('')
 const round = (offset, modulo) => Math.ceil(offset / modulo) * modulo
 
 /**
+ * DEC is a class decorator (higher order function).
+ * It assigns class-specifiy values to class prototype object, including:
+ * - `code`, string, type code
+ * - `align`, byte alignment
+ * - `size`, data size in bytes, only applicable for fixed size types.
+ * - `sign`
+// code, align and size decorator
+// all types have code and alignment, only fixed types have size
+// all integer based types have sign, either true or false,
+// the upper bound and lower bound are calculated according to sign and bits
+// if no sign, the bound check is skipped
+ */
+
+/**
+ * DEC is a class decorator, assigning class-specific attributes to each
+ * DBus data type class.
  *
+ * Since es2016 class decorator is not supported yet in node, the function
+ * could only be used in the form of function invocation, rather than the
+ * much cleaner `@` annotation syntax.
+ * @param {object} attrs - class attributes to assign to prototype object
+ * @param {string} attrs.code - type code
+ * @param {number} align - byte alignment
+ * @param {number} size - size of the fixed-size type
+ * @param {boolean} sign - true for signed int, false for unsigned int;
+ * only applicable for integers
+ * @param {number} bits - length in bits of signed or unsigned integers
+ */
+const DEC = attrs => type => {
+  const { code, align, size, sign, bits } = attrs
+  type.prototype._code = code
+  type.prototype._align = align
+  if (size) {
+    type.prototype._size = size
+    if (typeof sign === 'boolean') {
+      type.prototype._sign = sign
+      type.prototype._bits = bits
+    }
+  }
+  return type
+}
+
+/**
+ * TYPE is the base class of all DBus data type classes.
  */
 class TYPE {
+  /**
+   * Constructs an DBus type object.
+   * 
+   * If invoked by constructing a derived class with new, such as , do nothing.
+   * If invoked directly, this constructor returns an object
+   * of one derived class, according to `sig` argument. This
+   * is the so-called **abstract factory** pattern in GoF book.
+   * @param {string} sig - type signature
+   * @param {string} [val] - value, depends on type
+   */
   constructor (...args) {
     // abstract factory
     // new TYPE(sig) -> construct an empty TYPE object
     // new TYPE(sig, val) -> construct and TYPE object from value
     if (this.constructor === TYPE) { // abstract factory
-      let Type = this.type(args[0])
+      const Type = this.type(args[0])
       if (!Type) {
         throw new Error(`bad sig, ${args[0]}`)
       }
@@ -89,6 +163,9 @@ class TYPE {
     }
   }
 
+  /**
+   * 
+   */
   type (sig) {
     return this._map[sig[0]]
   }
@@ -100,38 +177,37 @@ class TYPE {
   }
 }
 
-// code, align and size decorator
-// all types have code and alignment, only fixed types have size
-// all integer based types have sign, either true or false,
-// the upper bound and lower bound are calculated according to sign and bits
-// if no sign, the bound check is skipped
-const DEC = ({ code, align, size, sign, bits }) => type => {
-  // map: code -> type
-  TYPE.prototype._map = Object.assign({}, TYPE.prototype._map, { [code]: type })
-  type.prototype._code = code
-  type.prototype._align = align
-  if (size) {
-    type.prototype._size = size
-    if (typeof sign === 'boolean') {
-      type.prototype._sign = sign
-      type.prototype._bits = bits
-    }
-  }
-  return type
-}
-
-// ANY common attribute besides dict_entry key?
+/**
+ * BASIC_TYPE contains primitive values, including
+ * both fixed-size and variable-size values.
+ *
+ * All basic types have a value member, which is a 
+ * number (integer), a bigint, or a string
+ */
 class BASIC_TYPE extends TYPE {
+  /**
+   * returns value
+   */
   eval () {
     return this.value
   }
 }
 
+/**
+ * FIXED_TYPE contains primitive values with fixed size.
+ */
 class FIXED_TYPE extends BASIC_TYPE {
+  /**
+   * Constructs a FIXED_TYPE object.
+   *
+   * `value` should be a number in range for different types. For 64-bit
+   * integers, value should be a bigint.
+   * 
+   * @param {number|bigint} [value]
+   */
   constructor (value) {
     super()
-    if (value === undefined) {
-    } else if (Number.isInteger(value)) {
+    if (Number.isInteger(value)) {
       if (typeof this._sign === 'boolean') {
         let lower, upper
         switch (this._bits) {
@@ -151,6 +227,9 @@ class FIXED_TYPE extends BASIC_TYPE {
             lower = this._sign ? -0x80000000 : 0
             upper = this._sign ? 0x7fffffff : 0xffffffff
             break
+          case 64:
+            // TODO use BigInt
+            break
           default:
             throw new Error('invalid bits')
         }
@@ -159,25 +238,31 @@ class FIXED_TYPE extends BASIC_TYPE {
       this.value = value
     } else if (typeof value === 'bigint') {
       if (typeof this._sign !== 'boolean') throw new Error('no sign for bigint')
-      let lower = this._sign ? -0x8000000000000000n : 0n
-      let upper = this._sign ? 0x7fffffffffffffffn : 0xffffffffffffffffn
+      const lower = this._sign ? -0x8000000000000000n : 0n
+      const upper = this._sign ? 0x7fffffffffffffffn : 0xffffffffffffffffn
       if (value < lower || value > upper) throw new Error('out of range')
       this.value = value
-    } else {
+    } else if (value !== undefined) {
       throw new Error('invalid value type')
     }
   }
 
+  /**
+   * Writes value to buffer 
+   */
   marshal (buf, offset, le) {
     offset = round(offset, this._align)
     this._write(buf, offset, le)
     return offset + this._size
   }
 
+  /**
+   *
+   */
   unmarshal (buf, offset, le) {
-    let $0 = offset
+    const $0 = offset
     offset = round(offset, this._align)
-    let $1 = offset
+    const $1 = offset
     this.value = this._read(buf, offset, le)
     offset += this._size
 
@@ -187,45 +272,192 @@ class FIXED_TYPE extends BASIC_TYPE {
   }
 }
 
-const BYTE = DEC({ code: 'y', align: 1, size: 1, sign: false, bits: 8 })(
-  class BYTE extends FIXED_TYPE {
-    constructor (value) {
-      if (typeof value === 'string' && value.length === 1) {
-        value = Buffer.from(value)[0]
+/**
+ * BYTE class represents a DBus BYTE data type.
+ */
+class BYTE extends FIXED_TYPE {
+  /**
+   * Constructs a BYTE object.
+   * 
+   * `value` should be an integer from 0 to 255. A character is
+   * also allowed for convenience. For example, 'l' denotes little 
+   * endian in message header. If not provided, the BYTE object has
+   * no value. The value should be generated from unmarshalling 
+   * binary data.
+   *
+   * @param {number|string|undefined} value - byte value
+   */
+  constructor (value) {
+    super()
+
+    if (typeof value === 'string' && 
+      value.length === 1) {
+      value = Buffer.from(value)[0]
+    }
+
+    if (value !== undefined) {
+      if (!Number.isInteger(value)) {
+        throw new TypeError('expects an integer')
       }
-      super(value)
-    }
 
-    _write (buf, offset, le) {
-      buf.writeUInt8(this.value, offset)
-    }
+      if (value < 0 || value > 255) {
+        throw new RangeError('value must be in range of 0 to 255')
+      }
 
-    _read (buf, offset, le) {
-      return buf.readUInt8(offset)
+      this.value = value
     }
-  })
+  }
 
-const INT16 = DEC({ code: 'n', align: 2, size: 2, sign: true, bits: 16 })(
-  class INT16 extends FIXED_TYPE {
-    _write (buf, offset, le) {
-      le ? buf.writeInt16LE(this.value, offset) : buf.writeInt16BE(this.value, offset)
-    }
+  /**
+   * Writes value to buffer at given offset.
+   *
+   * @param {Buffer} buf
+   * @param {number} offset
+   * @throws {RangeError} if offset equal or greater than buffer length
+   */
+  _write (buf, offset) {
+    buf.writeUInt8(this.value, offset)
+  }
 
-    _read (buf, offset, le) {
-      return le ? buf.readInt16LE(offset) : buf.readInt16BE(offset)
-    }
-  })
+  /**
+   * Reads value from buffer at given offset.
+   * @param {Buffer} buf
+   * @param {number} offset
+   * @returns {number} an integer value ranging from 0 to 255
+   */
+  _read (buf, offset) {
+    return buf.readUInt8(offset)
+  }
+}
 
-const UINT16 = DEC({ code: 'q', align: 2, size: 2, sign: false, bits: 16 })(
-  class UINT16 extends FIXED_TYPE {
-    _write (buf, offset, le) {
-      le ? buf.writeUInt16LE(this.value, offset) : buf.writeUInt16BE(this.value, offset)
-    }
+Object.assign(BYTE.prototype, { 
+  _code: 'y', 
+  _align: 1, 
+  _size: 1, 
+  _sign: false, 
+  _bits: 8 
+})
 
-    _read (buf, offset, le) {
-      return le ? buf.readUInt16LE(offset) : buf.readUInt16BE(offset)
+/**
+ * INT16 represens a DBus INT16 data type
+ */
+class INT16 extends FIXED_TYPE {
+  /**
+   * Constructs a INT16 object 
+   *
+   * @param {number} value
+   * @throws {TypeError} if value not an integer
+   * @throws {RangeError} if value out of range
+   */
+  constructor (value) {
+    super()
+    if (value !== undefined) {
+      if (!Number.isInteger(value)) {
+        throw new TypeError('not an integer')
+      }
+
+      if (value < -32768 || value > 32767) {
+        throw new RangeError('value must be in range of -32768 to 32767')
+      }
+      this.value = value
     }
-  })
+  }
+
+  /**
+   * Writes value into buffer at given offset with provided endianness
+   *
+   * @param {Buffer} buf
+   * @param {number} offset
+   * @param {boolean} le - true for little-endian, false for big-endian
+   */
+  _write (buf, offset, le) {
+    if (le) {
+      buf.writeInt16LE(this.value, offset)
+    } else {
+      buf.writeInt16BE(this.value, offset)
+    }
+  }
+
+  /**
+   * Reads value from buffer at given offset with provided endianness
+   *
+   * @param {Buffer} buf
+   * @param {number} offset
+   * @param {boolean} le - true for little-endian, false for big-endian
+   * @returns {number} an integer ranging from -32,768 to 32767
+   */
+  _read (buf, offset, le) {
+    return le ? buf.readInt16LE(offset) : buf.readInt16BE(offset)
+  }
+}
+
+Object.assign(INT16.prototype, {
+  _code: 'n', 
+  _align: 2, 
+  _size: 2, 
+  _sign: true, 
+  _bits: 16
+})
+
+/**
+ *
+ */
+class UINT16 extends FIXED_TYPE {
+  /**
+   * Constructs a UINT16 type object
+   * @throws {TypeError} if value not an integer
+   * @throws {RangeError} if value out of range
+   */
+  constructor (value) {
+    super()
+    if (value !== undefined) {
+      if (!Number.isInteger(value)) {
+        throw new TypeError('not an integer')
+      }
+
+      if (value < 0 || value > 65535) {
+        throw new RangeError('value must be in range of 0 to 65535')
+      }
+
+      this.value = value
+    }
+  }
+
+  /**
+   * Writes value into buffer at given offset with provided endianness
+   *
+   * @param {Buffer} buf
+   * @param {number} offset
+   * @param {boolean} le - true for little-endian, false for big-endian
+   */
+  _write (buf, offset, le) {
+    if (le) {
+      buf.writeUInt16LE(this.value, offset) 
+    } else { 
+      buf.writeUInt16BE(this.value, offset)
+    }
+  }
+
+  /**
+   * Reads value from buffer at given offset with provided endianness
+   *
+   * @param {Buffer} buf
+   * @param {number} offset
+   * @param {boolean} le - true for little-endian, false for big-endian
+   * @returns {number} an integer ranging from -32,768 to 32767
+   */
+  _read (buf, offset, le) {
+    return le ? buf.readUInt16LE(offset) : buf.readUInt16BE(offset)
+  }
+}
+
+Object.assign(UINT16.prototype, { 
+  _code: 'q', 
+  _align: 2, 
+  _size: 2, 
+  _sign: false, 
+  _bits: 16 
+})
 
 const INT32 = DEC({ code: 'i', align: 4, size: 4, sign: true, bits: 32 })(
   class INT32 extends FIXED_TYPE {
@@ -316,9 +548,9 @@ class STRING_LIKE_TYPE extends BASIC_TYPE {
   }
 
   marshal (buf, offset, le) {
-    let $0 = offset
+    const $0 = offset
     offset = round(offset, this._align)
-    let $1 = offset
+    const $1 = offset
 
     this._write(buf, offset, le)
     offset += this._align // happens to be the same value
@@ -333,9 +565,9 @@ class STRING_LIKE_TYPE extends BASIC_TYPE {
   }
 
   unmarshal (buf, offset, le) {
-    let d0 = offset
+    const d0 = offset
     offset = round(offset, this._align)
-    let d1 = offset
+    const d1 = offset
 
     let strlen
     if (this._align === 1) {
@@ -398,6 +630,9 @@ const SIGNATURE = DEC({ code: 'g', align: 1 })(
     }
   })
 
+/**
+ * CONTAINER_TYPE is the parent
+ */
 // signature is a string, value is an array of TYPE object
 // if signature is omitted, signature is generated automatically
 // if value is omitted
@@ -411,6 +646,13 @@ class CONTAINER_TYPE extends TYPE {
   // elems must be an array of TYPE objects, if signature is not provided, the array
   // must not be empty
   // signature must be non-empty string
+
+  /**
+   * @param {object} opts
+   * @param {string} opts.signature
+   * @param {TYPE[]} opts.elems - a colletion of elements (TYPE object)
+   * @param {string|number|bigint} opts.vals - a collection of JavaScript values which could be converted to elements
+   */
   constructor (...args) {
     super()
     if (args.length === 1) {
@@ -436,7 +678,7 @@ class CONTAINER_TYPE extends TYPE {
         if (!args[1].every(e => !(e instanceof TYPE))) {
           throw new Error('elems contains TYPE object')
         }
-        
+
         log('constructByValues', this.constructor.name, args[0], args[1])
 
         this.constructByValues(args[0], args[1])
@@ -447,6 +689,9 @@ class CONTAINER_TYPE extends TYPE {
   }
 
   // intended for unmarshalling
+  /**
+   * @param
+   */
   constructBySignature (sig) {
     throw new Error('virtual method')
   }
@@ -470,9 +715,9 @@ class CONTAINER_TYPE extends TYPE {
   }
 
   marshal (buf, offset, le) {
-    let $0 = offset
+    const $0 = offset
     offset = round(offset, this._align)
-    let $1 = offset
+    const $1 = offset
 
     logm($, this.constructor.name, `${$0}/${$1}, {`)
     $more()
@@ -488,6 +733,9 @@ class CONTAINER_TYPE extends TYPE {
   }
 }
 
+/**
+ * An array contains a collection of objects of the same type
+ */
 const ARRAY = DEC({ code: 'a', align: 4 })(
   class ARRAY extends CONTAINER_TYPE {
     constructBySignature (sig) {
@@ -503,7 +751,7 @@ const ARRAY = DEC({ code: 'a', align: 4 })(
       if (elems.length === 0) {
         return this.constructBySignature(sig)
       } else {
-        let esig = elems[0].signature()
+        const esig = elems[0].signature()
         if (!elems.every(e => e.signature() === esig)) {
           throw new Error('ARRAY elements must have the same signature')
         } else if (esig !== sig.slice(1)) {
@@ -527,14 +775,14 @@ const ARRAY = DEC({ code: 'a', align: 4 })(
 
     // return offset TODO elem align refactor
     marshal (buf, offset, le) {
-      let $0 = offset
+      const $0 = offset
       offset = round(offset, 4)
-      let $1 = offset
+      const $1 = offset
 
-      let numOffset = offset
+      const numOffset = offset
       offset += this._align
       offset = round(offset, this.type(this.esig).prototype._align)
-      let elemOffset = offset
+      const elemOffset = offset
 
       logm($, this.constructor.name,
         `${$0}/${$1}, num @ ${numOffset}, element[0] @ ${elemOffset} {`)
@@ -543,7 +791,7 @@ const ARRAY = DEC({ code: 'a', align: 4 })(
       offset = this.elems.reduce((offset, elem) =>
         elem.marshal(buf, offset, le), elemOffset)
 
-      let num = offset - elemOffset
+      const num = offset - elemOffset
       if (le) {
         buf.writeUInt32LE(num, numOffset)
       } else {
@@ -556,20 +804,20 @@ const ARRAY = DEC({ code: 'a', align: 4 })(
     }
 
     unmarshal (buf, offset, le) {
-      let d0 = offset
+      const d0 = offset
       offset = round(offset, this._align)
-      let d1 = offset
+      const d1 = offset
 
-      let num = le ? buf.readUInt32LE(offset) : buf.readUInt32BE(offset)
+      const num = le ? buf.readUInt32LE(offset) : buf.readUInt32BE(offset)
       offset += 4
       offset = round(offset, this.type(this.esig).prototype._align)
-      let elemStart = offset
+      const elemStart = offset
 
       logu($, this.constructor.name, `${d0}/${d1}, n: ${num}, es: ${offset} {`)
       $more()
 
       while (offset < elemStart + num) {
-        let elem = new TYPE(this.esig)
+        const elem = new TYPE(this.esig)
         offset = elem.unmarshal(buf, offset, le)
         this.elems.push(elem)
       }
@@ -617,16 +865,16 @@ const STRUCT = DEC({ code: '(', align: 8 })(
     }
 
     unmarshal (buf, offset, le) {
-      let d0 = offset
+      const d0 = offset
       offset = round(offset, this._align)
-      let d1 = offset
+      const d1 = offset
 
       logu($, this.constructor.name, `${d0}/${d1} {`)
       $more()
 
       this.elems = []
       this.esigs.forEach(sig => {
-        let elem = new TYPE(sig)
+        const elem = new TYPE(sig)
         offset = elem.unmarshal(buf, offset, le)
         this.elems.push(elem)
       })
@@ -651,7 +899,7 @@ const DICT_ENTRY = DEC({ code: '{', align: 8 })(
   class DICT_ENTRY extends STRUCT {
     constructBySignature (sig) {
       if (!/^\{.+\}$/.test(sig)) throw new Error('invalid DICT_ENTRY signature')
-      let esigs = explode(sig.slice(1, sig.length - 1))
+      const esigs = explode(sig.slice(1, sig.length - 1))
       if (esigs.length !== 2) {
         throw new Error('dict entry requires exactly two elements as key value')
       } else if (!basicTypeCodes.includes(esigs[0])) {
@@ -683,19 +931,19 @@ const DICT_ENTRY = DEC({ code: '{', align: 8 })(
     constructByValues (sig, values) {
       if (!/^\{.+\}$/.test(sig)) {
         throw new Error('invalid DICT_ENTRY signature')
-      } 
+      }
 
       this.sig = sig
-      let esigs = explode(sig.slice(1, sig.length - 1)) 
+      const esigs = explode(sig.slice(1, sig.length - 1))
       if (values.length !== 2 || esigs.length !== 2) {
-        throw new Error('dict entry requires exactly two elements as key value') 
+        throw new Error('dict entry requires exactly two elements as key value')
       }
 
       this.esigs = esigs
       this.elems = [
-        new TYPE(esigs[0], values[0]), 
+        new TYPE(esigs[0], values[0]),
         new TYPE(esigs[1], values[1])
-      ] 
+      ]
     }
   })
 
@@ -740,24 +988,24 @@ const VARIANT = DEC({ code: 'v', align: 1 })(
         throw new Error('invalid signature')
       } else if (vals.length !== 2) {
         throw new Error('VARIANT reqruires exactly two values as signature and value')
-      } 
+      }
       this.sig = 'v'
       this.elems = [new SIGNATURE(vals[0]), new TYPE(vals[0], vals[1])]
       this.esigs = this.elems.map(elem => elem.signature())
     }
 
     unmarshal (buf, offset, le) {
-      let d0 = offset
+      const d0 = offset
 
       logu($, this.constructor.name, `${d0}/${d0} {`)
       $more()
 
-      let e0 = new SIGNATURE()
+      const e0 = new SIGNATURE()
       offset = e0.unmarshal(buf, offset, le)
       this.elems.push(e0)
       this.esig = e0.value
 
-      let elem = new TYPE(this.esig)
+      const elem = new TYPE(this.esig)
       offset = elem.unmarshal(buf, offset, le)
       this.elems.push(elem)
 
@@ -767,6 +1015,26 @@ const VARIANT = DEC({ code: 'v', align: 1 })(
       return offset
     }
   })
+
+TYPE.prototype._map = {
+  'y': BYTE,
+  'n': INT16,
+  'q': UINT16,
+  'i': INT32,
+  'u': UINT32,
+  'b': BOOLEAN,
+  'h': UNIX_FD,
+  'x': INT64,
+  't': UINT64,
+  'd': DOUBLE,
+  's': STRING,
+  'o': OBJECT_PATH,
+  'g': SIGNATURE,
+  'a': ARRAY,
+  '(': STRUCT,
+  '{': DICT_ENTRY,
+  'v': VARIANT 
+}
 
 module.exports = {
   LITTLE,

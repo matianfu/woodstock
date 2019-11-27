@@ -29,6 +29,7 @@
     "sloc": "^0.2.1"
   },
   "scripts": {
+    "jsdoc": "jsdoc src -d docs/dbus -c docs/jsdoc-md.json",
     "test": "mocha"
   },
   "repository": {

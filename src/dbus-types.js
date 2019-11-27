@@ -1,5 +1,5 @@
 const debug = require('debug')
-const explode = require('./explode')
+const { explode, slice } = require('./signature')
 
 const log = debug('dbus:types')
 const logm = debug('marshal')
@@ -535,6 +535,9 @@ const DOUBLE = DEC({ code: 'd', align: 8, size: 8 })(
     }
   })
 
+/**
+ * base class of all string-like types.
+ */
 class STRING_LIKE_TYPE extends BASIC_TYPE {
   constructor (value) {
     super()
@@ -631,7 +634,8 @@ const SIGNATURE = DEC({ code: 'g', align: 1 })(
   })
 
 /**
- * CONTAINER_TYPE is the parent
+ * CONTAINER_TYPE is the base class of ARRAY, STRUCT, DICT_ENTRY and VARIANT.
+ * 
  */
 // signature is a string, value is an array of TYPE object
 // if signature is omitted, signature is generated automatically
@@ -641,7 +645,6 @@ class CONTAINER_TYPE extends TYPE {
   // new CONTAINER(elems, signature) constructs an object loaded with elements, signature is optional, if provided, the constructor will check if they are match.
   // new CONTAINER(signature, vals) constructs an object loaded with elements converted from vals, signature is mandatory.
   // VARIANT is forbidden in construction by value.
-  //
 
   // elems must be an array of TYPE objects, if signature is not provided, the array
   // must not be empty
@@ -655,6 +658,18 @@ class CONTAINER_TYPE extends TYPE {
    */
   constructor (...args) {
     super()
+    /**
+     * signature string
+     * @type {string}
+     */
+    this.sig = ''
+
+    /**
+     * an array of TYPE object
+     * @type {TYPE[]}
+     */
+    this.elems = []
+
     if (args.length === 1) {
       if (typeof args[0] === 'string') {
         this.constructBySignature(args[0])
@@ -834,6 +849,11 @@ const ARRAY = DEC({ code: 'a', align: 4 })(
       return this
     }
   })
+
+Object.assign(ARRAY.prototype, {
+  _code: 'a',
+  _align: 4
+})
 
 // no container header, accept list of single complete types
 const STRUCT = DEC({ code: '(', align: 8 })(

@@ -60,64 +60,9 @@ const basicTypeCodes = 'ybnqiuxtdsogh'.split('')
 const round = (offset, modulo) => Math.ceil(offset / modulo) * modulo
 
 /**
- * DEC is a class decorator (higher order function).
- * It assigns class-specifiy values to class prototype object, including:
- * - `code`, string, type code
- * - `align`, byte alignment
- * - `size`, data size in bytes, only applicable for fixed size types.
- * - `sign` 
-// code, align and size decorator
-// all types have code and alignment, only fixed types have size
-// all integer based types have sign, either true or false,
-// the upper bound and lower bound are calculated according to sign and bits
-// if no sign, the bound check is skipped
- */
-
-/**
- * DEC is a class decorator, assigning class-specific attributes to each
- * DBus data type class. 
  *
- * Since es2016 class decorator is not supported yet in node, the function
- * could only be used in the form of function invocation, rather than the
- * much cleaner `@` annotation syntax. 
- * @param {object} attrs - class attributes to assign to prototype object
- * @param {string} attrs.code - type code
- * @param {number} align - byte alignment
- * @param {number} size - size of the fixed-size type
- * @param {boolean} sign - true for signed int, false for unsigned int; 
- * only applicable for integers 
- * @param {number} bits - length in bits of signed or unsigned integers
- */
-const DEC = attrs => type => {
-  const { code, align, size, sign, bits } = attrs
-  // map: code -> type
-  TYPE.prototype._map = Object.assign({}, TYPE.prototype._map, { [code]: type })
-  type.prototype._code = code
-  type.prototype._align = align
-  if (size) {
-    type.prototype._size = size
-    if (typeof sign === 'boolean') {
-      type.prototype._sign = sign
-      type.prototype._bits = bits
-    }
-  }
-  return type
-}
-
-
-/**
- * TYPE is the base class of all DBus data type classes.
  */
 class TYPE {
-  /**
-   * Constructs an DBus type object.
-   * If invoked by constructing a derived class with new, such as , do nothing.
-   * If invoked directly, this constructor returns an object
-   * of one derived class, according to `sig` argument. This
-   * is the so-called **abstract factory** pattern in GoF book.
-   * @param {string} sig - type signature
-   * @param {string} [val] - value, depends on type
-   */
   constructor (...args) {
     // abstract factory
     // new TYPE(sig) -> construct an empty TYPE object
@@ -144,9 +89,6 @@ class TYPE {
     }
   }
 
-  /**
-   * returns type code TODO not instance specific
-   */
   type (sig) {
     return this._map[sig[0]]
   }
@@ -158,23 +100,33 @@ class TYPE {
   }
 }
 
-// ANY common attribute besides dict_entry key? TODO
+// code, align and size decorator
+// all types have code and alignment, only fixed types have size
+// all integer based types have sign, either true or false,
+// the upper bound and lower bound are calculated according to sign and bits
+// if no sign, the bound check is skipped
+const DEC = ({ code, align, size, sign, bits }) => type => {
+  // map: code -> type
+  TYPE.prototype._map = Object.assign({}, TYPE.prototype._map, { [code]: type })
+  type.prototype._code = code
+  type.prototype._align = align
+  if (size) {
+    type.prototype._size = size
+    if (typeof sign === 'boolean') {
+      type.prototype._sign = sign
+      type.prototype._bits = bits
+    }
+  }
+  return type
+}
 
-/**
- * Basic type have fixed or variable sized primitive value
- */
+// ANY common attribute besides dict_entry key?
 class BASIC_TYPE extends TYPE {
-  /**
-   * returns TODO
-   */
   eval () {
     return this.value
   }
 }
 
-/**
- *
- */
 class FIXED_TYPE extends BASIC_TYPE {
   constructor (value) {
     super()
@@ -199,9 +151,6 @@ class FIXED_TYPE extends BASIC_TYPE {
             lower = this._sign ? -0x80000000 : 0
             upper = this._sign ? 0x7fffffff : 0xffffffff
             break
-          case 64:
-            // TODO use BigInt
-            break
           default:
             throw new Error('invalid bits')
         }
@@ -219,18 +168,12 @@ class FIXED_TYPE extends BASIC_TYPE {
     }
   }
 
-  /**
-   *
-   */
   marshal (buf, offset, le) {
     offset = round(offset, this._align)
     this._write(buf, offset, le)
     return offset + this._size
   }
 
-  /**
-   *
-   */
   unmarshal (buf, offset, le) {
     let $0 = offset
     offset = round(offset, this._align)

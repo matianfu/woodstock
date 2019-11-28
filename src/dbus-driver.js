@@ -157,10 +157,16 @@ class DBusDriver extends EventEmitter {
   handleData (data) {
     this.data = Buffer.concat([this.data, data])
     while (1) {
+/**
       const dec = decode(this.data)
       if (!dec) return
       this.data = this.data.slice(dec.length)
       this.handleMessage(dec.m)
+*/
+      const m = decode(this.data)
+      if (!m) return
+      this.data = this.data.slice(m.bytesDecoded)
+      this.handleMessage(m)
     }
   }
 
@@ -193,6 +199,7 @@ class DBusDriver extends EventEmitter {
   }
 
   handleMessage (m) {
+
     console.log(m)
 
     if (m.type === 'METHOD_CALL') {

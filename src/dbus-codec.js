@@ -1,73 +1,64 @@
 const {
   LITTLE, BIG,
-  BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64, DOUBLE, UNIX_FD,
-  STRING, OBJECT_PATH, SIGNATURE,
-  STRUCT, ARRAY, VARIANT, DICT_ENTRY
+  BYTE, UINT32, STRING, OBJECT_PATH, SIGNATURE,
+  STRUCT, ARRAY, VARIANT
 } = require('./dbus-types')
 
 /**
-Header (yyyyuua(yv))
-
-0       BYTE  endianness 'l' for little and 'B' for BIG
-1       BYTE  message type
-              0   INVALID
-              1   METHOD_CALL
-              2   METHOD_RETURN
-              3   ERROR
-              4   SIGNAL
-2       BYTE  flags
-              0x01  NO_REPLY_EXPECTED
-              0x02  NO_AUTO_START
-              0x04  ALLOW_INTERACTIVE_AUTHORIZATION
-3       BYTE  protocol version
-4       UINT32  body length
-8       UINT32  message serial
-12      ARRAY of STRUCT of (BYTE, VARIANT)
-                                                  Required
-              0   INVALID
-              1   PATH          OBJECT_PATH       METHOD_CALL, SIGNAL
-              2   INTERFACE     STRING            SIGNAL
-              3   MEMBER        STRING            METHOD_CALL, SIGNAL
-              4   ERROR_NAME    STRING            ERROR
-              5   REPLY_SERIAL  UINT32            ERROR, METHOD_RETURN
-              6   DESTINATION   STRING            optional
-              7   SENDER        STRING            optional
-              8   SIGNATURE     SIGNATURE (body)  optional
-              9   UNIX_FDS      UINT32            optional
-*/
-
-/*
-  # endian
-  type ??
-  flags
-  # version
-  # body length
-  # serial
-
-  path
-  interface
-  member
-  errorName
-  replaySerial
-  destination
-  # sender
-  signature
-  unixFds
-
-  body
-  */
-
-/**
- * @typedef
+ * This module provides low-level for encoding or decoding
+ * wire format messages.
+ *
+ * The message in JavaScript object literal format is not intended
+ * for upper layer applications. It includes properties for driver layer,
+ * such as serial, protocol version, flags, etc.
+ *
+ * TODO
+ * - Buffer is preallocated, not a dryrun of marshal, TYPE does not support yet
+ *
+ * ### Wire Format
+ * ```
+ * Header (yyyyuua(yv))
+ *
+ * 0       BYTE  endianness 'l' for little and 'B' for BIG
+ * 1       BYTE  message type
+ *               0   INVALID
+ *               1   METHOD_CALL
+ *               2   METHOD_RETURN
+ *               3   ERROR
+ *               4   SIGNAL
+ * 2       BYTE  flags
+ *               0x01  NO_REPLY_EXPECTED
+ *               0x02  NO_AUTO_START
+ *               0x04  ALLOW_INTERACTIVE_AUTHORIZATION
+ * 3       BYTE  protocol version
+ * 4       UINT32  body length
+ * 8       UINT32  message serial
+ * 12      ARRAY of STRUCT of (BYTE, VARIANT)
+ *                                                   Required
+ *               0   INVALID
+ *               1   PATH          OBJECT_PATH       METHOD_CALL, SIGNAL
+ *               2   INTERFACE     STRING            SIGNAL
+ *               3   MEMBER        STRING            METHOD_CALL, SIGNAL
+ *               4   ERROR_NAME    STRING            ERROR
+ *               5   REPLY_SERIAL  UINT32            ERROR, METHOD_RETURN
+ *               6   DESTINATION   STRING            optional
+ *               7   SENDER        STRING            optional
+ *               8   SIGNATURE     SIGNATURE (body)  optional
+ *               9   UNIX_FDS      UINT32            optional
+ * ```
+ *
+ * 
+ * @module dbus-codec
  */
+
 
 /**
  * Converts type string to type code
  *
  * @param {string} type - `METHOD_CALL`, `METHOD_RETURN`, `ERROR` or `SIGNAL`
- * @returns type code
- * @throws TypeError
- * @throws RangeError
+ * @returns {number} type code
+ * @throws {TypeError} type not a string
+ * @throws {RangeError} invalid type value
  */
 const encodeType = type => {
   if (typeof type !== 'string') {
@@ -91,6 +82,12 @@ const encodeType = type => {
 /**
  * Converts type code to type string
  *
+ * TODO is 0 valid?
+ *
+ * @param {number} code - type code, 0, 1, 2, 3, or 4
+ * @returns {string} type string
+ * @throws {TypeError} code is not an integer
+ * @throws {RangeError} invalid code
  */
 const decodeType = code => {
   if (!Number.isInteger(code)) {
@@ -114,10 +111,16 @@ const decodeType = code => {
 }
 
 /**
- * @param {object} flags
- * @param {boolean} flags.noReply
- * @param {boolean} flags.noAutoStart
- * @param {boolean} flags.interactiveAuth
+ * @typedef {object} Flags
+ * @property {boolean} noReply
+ * @property {boolean} noAutoStart
+ * @property {boolean} interactiveAuth
+ */
+
+/**
+ * Encodes a flags object
+ *
+ * @param {Flags} flags
  * @returns {number} code
  */
 const encodeFlags = flags => {
@@ -130,12 +133,12 @@ const encodeFlags = flags => {
   return x
 }
 
+
 /**
+ * Decodes a flags code to Flags object
+ *
  * @param {number} code
- * @returns {object} flags
- * @returns {boolean} flags.noReply
- * @returns {boolean} flags.noAutoStart
- * @returns {boolean} flags.interactiveAuth
+ * @returns {Flags}
  */
 const decodeFlags = code => {
   if (!Number.isInteger(code)) {
@@ -151,24 +154,14 @@ const decodeFlags = code => {
 
 /**
  * Encodes a header field
- * TODO this function is problematic, no way to validate value type:w
- *
- * @param {number} key
- * @param {x} value
- * @param {TYPE} Type
- */
-const encodeField = (key, value, Type) =>
-  new STRUCT([new BYTE(key), new VARIANT(new Type(value))], '(yv)')
-
-/**
- * Encodes a header field
  *
  * @param {number} key - field number 1-9, see DBus Specification
- * @returns {STRUCT}
- * @throws
- * @throws RangeError
+ * @returns {STRUCT} encoded header field
+ * @throws {TypeError} key is not an integer or the value type 
+ *                     does not match the key
+ * @throws {RangeError} key value is out of range
  */
-const encodeHeaderField = (key, value) => {
+const headerField = (key, value) => {
   if (!Number.isInteger(key)) {
     throw new TypeError('key not an integer')
   }
@@ -207,6 +200,8 @@ const encodeHeaderField = (key, value) => {
 }
 
 /**
+ * Encode given message to DBus message
+ *
  * @param {object} m - message to encode
  * @param {number} m.type - message type code
  * @param {object} m.flags - message flags
@@ -219,7 +214,8 @@ const encodeHeaderField = (key, value) => {
  * @param {string} [m.signature] - body signature. If body provided, signature
  * must be consistent. If body not provided, signature neglected.
  * @param {TYPE} [m.body] - message body
- * @param {number} serial - serial number TODO why not fetch from this?
+ * @param {number} serial - serial number
+ * @returns {Buffer} encoded message in wire format
  */
 const encode = (m, serial, name = '') => {
   console.log(m)
@@ -245,50 +241,48 @@ const encode = (m, serial, name = '') => {
   /** protocol version */
   header.push(new BYTE(0x01))
 
-  const bodyWrap = m.body && new STRUCT(m.body)
-  const bodyWrapSig = m.body && bodyWrap.signature()
-
-  const bodyLength = m.body ? bodyWrap.marshal(bodyBuf, 0, LITTLE) : 0
+  const body = m.body && new STRUCT(m.body)
+  const bodyLength = m.body ? body.marshal(bodyBuf, 0, LITTLE) : 0
 
   header.push(new UINT32(bodyLength))
   header.push(new UINT32(serial))
 
   /** PATH */
   if (m.path) {
-    fields.push(encodeHeaderField(1, new OBJECT_PATH(m.path)))
+    fields.push(headerField(1, new OBJECT_PATH(m.path)))
   }
 
   /** INTERFACE */
   if (m.interface) {
-    fields.push(encodeHeaderField(2, new STRING(m.interface)))
+    fields.push(headerField(2, new STRING(m.interface)))
   }
 
   /** MEMBER */
   if (m.member) {
-    fields.push(encodeHeaderField(3, new STRING(m.member)))
+    fields.push(headerField(3, new STRING(m.member)))
   }
 
   /** ERROR_NAME */
   if (m.errorName) {
-    fields.push(encodeHeaderField(4, new STRING(m.errorName)))
+    fields.push(headerField(4, new STRING(m.errorName)))
   }
 
   /** REPLY_SERIAL */
   if (m.replySerial) {
-    fields.push(encodeHeaderField(5, new UINT32(m.replySerial)))
+    fields.push(headerField(5, new UINT32(m.replySerial)))
   }
 
   /** DESTINATION */
   if (m.destination) {
-    fields.push(encodeHeaderField(6, new STRING(m.destination)))
+    fields.push(headerField(6, new STRING(m.destination)))
   }
 
   /** SENDER */
   if (name) {
-    fields.push(encodeHeaderField(7, new STRING(name)))
+    fields.push(headerField(7, new STRING(name)))
   }
 
-  const sig = m.body && bodyWrap.signature().slice(1, -1)
+  const sig = body && body.signature().slice(1, -1)
 
   /** check m.signature if provided */
   if (sig && m.sig && sig !== m.sig) {
@@ -297,30 +291,51 @@ const encode = (m, serial, name = '') => {
 
   /** SIGNATURE */
   if (sig) {
-    // fields.push(encodeField(8, sig, SIGNATURE))
-    fields.push(encodeHeaderField(8, new SIGNATURE(sig)))
+    fields.push(headerField(8, new SIGNATURE(sig)))
   }
 
   /** UNIX_FDS */
   if (m.unixFds) {
-    fields.push(encodeField(9, m.unixFds, UINT32))
+    fields.push(headerField(9, new UINT32(m.unixFds)))
   }
 
   header.push(fields)
 
-  const len = header.marshal(headerBuf, 0, LITTLE)
+  const hlen = header.marshal(headerBuf, 0, LITTLE)
 
   return Buffer.concat([
-    headerBuf.slice(0, Math.ceil(len / 8) * 8),
+    headerBuf.slice(0, Math.ceil(hlen / 8) * 8),
     bodyBuf.slice(0, bodyLength)
   ])
 }
 
 /**
+ * @typedef DecodedMessage
+ * @property {boolean} le - true for little endian
+ * @property {string} type - type string
+ * @property {Flags} flags - message flags
+ * @property {number} version - protocol version
+ * @property {number} serial - serial number
+ * @property {string} path - object path
+ * @property {string} interface - interface name
+ * @property {string} member - method or signal name
+ * @property {string} errorName - error name
+ * @property {number} replySerial - serial in error or method return 
+ * @property {string} destination - destination name
+ * @property {string} sender - sender name
+ * @property {string} [signature] - body signature 
+ * @property {number} unixFds - unix file descriptor
+ * @property {TYPE[]} [body] - body is an array of TYPE object
+ * @property {number} bytesDecoded - decoded message length
+ */
+
+/**
+ * Decodes a wire format message from the given data.
+ * If the message is incomplete, returns undefined. Otherwise,
+ * return full message with decoded length in bytes.
  *
- * @returns {object} decode
- * @returns {number} decode.length - a data structure
- * @returns {object} decode.message - a decoded message
+ * @param {Buffer} data - a chunk of data
+ * @returns {DecodedMessage}
  */
 const decode = data => {
   if (data.length < 16) return
@@ -355,6 +370,7 @@ const decode = data => {
   }
 
   const m = {}
+  m.le = le
   m.type = decodeType(header.elems[1].value)
   m.flags = decodeFlags(header.elems[2].value)
   m.version = header.elems[3].value
@@ -363,8 +379,10 @@ const decode = data => {
   header.elems[6].elems.forEach(yv => {
     const y = yv.elems[0].value
     const v = yv.elems[1].elems[1].value
-    const names = ['invalid', 'path', 'interface', 'member', 'errorName',
-      'replySerial', 'destination', 'sender', 'signature', 'unixFds']
+    const names = [
+      'invalid', 'path', 'interface', 'member', 'errorName',
+      'replySerial', 'destination', 'sender', 'signature', 'unixFds'
+    ]
     if (y > 0 && y < 10) m[names[y]] = v
   })
 
@@ -387,7 +405,9 @@ const decode = data => {
     }
   }
 
-  return { length: totalLen, m }
+  // return { length: totalLen, m }
+  m.bytesDecoded = totalLen
+  return m
 }
 
 module.exports = { encode, decode }

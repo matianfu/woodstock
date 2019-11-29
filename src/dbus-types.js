@@ -871,7 +871,7 @@ const STRUCT = DEC({ code: '(', align: 8 })(
         elems.forEach(e => this.push(e))
       } else {
         this.elems = elems
-        this.esigs = this.elems.map(e => e.signature)
+        this.esigs = this.elems.map(e => e.signature())
         this.sig = '(' + this.esigs.join('') + ')'
       }
     }

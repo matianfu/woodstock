@@ -57,6 +57,7 @@ dbus.on('connect', () => {
       new ARRAY('a{sv}')
     ]
   })
+
   return
 
   /**
@@ -120,6 +121,7 @@ dbus.on('connect', () => {
   gatt.addChild(s0)
 
   // console.dir(dbus.root, { depth: 200 })
+  console.log('gatt.objectPath()', gatt.objectPath())
 
   dbus.driver.invoke({
     destination: 'org.bluez',

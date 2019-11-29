@@ -82,6 +82,8 @@ const slice = (sig, start, end) => {
  * @param {number} end - end positin, exclusive
  */
 const explode = (sig, start, end) => {
+  console.log('exploding sig', sig)
+
   if (typeof sig !== 'string') {
     throw new TypeError('sig not a string')
   }

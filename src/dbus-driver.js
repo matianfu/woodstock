@@ -93,6 +93,9 @@ class DBusDriver extends EventEmitter {
   connect (callback) {
     const socket = net.createConnection('/run/dbus/system_bus_socket')
     const handleError = err => {
+
+      console.log('handleError', err)
+
       socket.removeAllListeners()
       socket.on('error', () => {})
       socket.end()
@@ -107,7 +110,7 @@ class DBusDriver extends EventEmitter {
     let auth = false
 
     socket.on('error', handleError)
-    socket.on('close', handleError)
+    socket.on('close', () => console.log('unexpected close'))
     socket.on('data', data => {
       if (!auth) {
         const s = data.toString().trim()
@@ -123,8 +126,6 @@ class DBusDriver extends EventEmitter {
             interface: 'org.freedesktop.DBus',
             member: 'Hello'
           }, (err, body) => {
-            process.nextTick(() => console.log('next tick'))
-            setTimeout(() => console.log('timeout'), 3000)
             if (err) {
             } else {
               this.myName = body[0].value
@@ -142,7 +143,6 @@ class DBusDriver extends EventEmitter {
           console.log(e)
         }
       }
-      console.log('finish')
     })
 
     const uid = process.getuid()
@@ -150,34 +150,34 @@ class DBusDriver extends EventEmitter {
     socket.write(`\0AUTH EXTERNAL ${hex}\r\n`)
   }
 
-  handleError (err) {
-
-  }
-
   handleData (data) {
     this.data = Buffer.concat([this.data, data])
     while (1) {
-/**
-      const dec = decode(this.data)
-      if (!dec) return
-      this.data = this.data.slice(dec.length)
-      this.handleMessage(dec.m)
-*/
       const m = decode(this.data)
       if (!m) return
       this.data = this.data.slice(m.bytesDecoded)
-      this.handleMessage(m)
+      // this.handleMessage(m)
+      this.emit('message', m)
     }
   }
 
   send (m) {
     const serial = this.serial++
+
+    console.log(serial, this.myName)
+
     const wired = encode(m, serial, this.myName)
     this.socket.write(wired)
     if (m.debug) {
       console.log(m)
       print(wired)
     }
+
+    if (m.decode) {
+      const unwired = decode(wired)
+      console.log(unwired)
+    }
+
     return serial
   }
 
@@ -199,11 +199,12 @@ class DBusDriver extends EventEmitter {
   }
 
   handleMessage (m) {
+    
 
-    console.log(m)
+    console.log('message', m)
 
     if (m.type === 'METHOD_CALL') {
-      this.emit('invocation', m)
+      this.emit('message', m)
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
       const cb = this.callMap.get(m.replySerial)
       if (cb) {

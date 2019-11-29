@@ -82,7 +82,7 @@ const encodeType = type => {
 /**
  * Converts type code to type string
  *
- * TODO is 0 valid?
+ * TODO is 0 valid? NO!
  *
  * @param {number} code - type code, 0, 1, 2, 3, or 4
  * @returns {string} type string
@@ -242,6 +242,9 @@ const encode = (m, serial, name = '') => {
   header.push(new BYTE(0x01))
 
   const body = m.body && new STRUCT(m.body)
+
+
+
   const bodyLength = m.body ? body.marshal(bodyBuf, 0, LITTLE) : 0
 
   header.push(new UINT32(bodyLength))
@@ -282,7 +285,13 @@ const encode = (m, serial, name = '') => {
     fields.push(headerField(7, new STRING(name)))
   }
 
-  const sig = body && body.signature().slice(1, -1)
+  const sig = body && (body.signature()).slice(1, -1)
+
+if (body) {
+  console.log('======')
+  console.log(body)
+  console.log('======')
+}
 
   /** check m.signature if provided */
   if (sig && m.sig && sig !== m.sig) {

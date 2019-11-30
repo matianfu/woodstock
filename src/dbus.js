@@ -14,6 +14,7 @@ const print = buf => {
   }
 }
 
+
 /**
 an example error
 { type: 'ERROR',
@@ -55,10 +56,21 @@ class DBus extends EventEmitter {
    * Constructs a DBus connection
    *
    * @param {object} opts
+   * @param {string} role - helper name for testing and debugging
    * @param {string} opts.address - socket address (path)
    */
-  constructor (opts) {
+  constructor (opts = {}) {
     super()
+
+    this.role = opts.role
+
+    /**
+     *
+     */
+    this.interfaces = []
+
+    this.nodes = []
+
     /**
      * Maps outgoing serial to [m, callback]
      * @type {map}
@@ -238,8 +250,7 @@ class DBus extends EventEmitter {
    */
   handleMessage (m) {
     if (m.type === 'METHOD_CALL') {
-      // TODO
-      this.emit('message', m)
+      this.handleMethodCall(m)
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
       const pair = this.callMap.get(m.replySerial)
       if (pair) {
@@ -359,6 +370,28 @@ class DBus extends EventEmitter {
         console.log(JSON.stringify(parsed, null, '  '))
       }
     })
+  }
+
+  handleMethodCall (m) {
+    console.log(this.role || this.myName, 'handleMethodCall', m)
+    const node = this.nodes.find(n => n.path === m.path) 
+    if (!node) {
+      // org.freedesktop.DBus.Error.UnknownObject
+      this.send({
+        type: 'ERROR',
+        flags: { noReply: true },
+        destination: m.sender,
+        errorName: 'org.freedesktop.DBus.Error.UnknownObject',
+        replySerial: m.serial,
+        signature: 's',
+        body: [new STRING('object not found')]
+      })
+    }
+
+    const iface = this.interfaces.find(iface => iface.name === m.interface)
+    const member = iface[m.member]
+
+    member.apply(this, m.body)
   }
 }
 

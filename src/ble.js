@@ -1,4 +1,5 @@
 const EventEmitter = require('events')
+const DBus = require('./dbus')
 
 /**
  * BLE implements a BLE service
@@ -14,11 +15,16 @@ class BLE extends EventEmitter {
    */
   constructor (opts) {
     super()
+
+    this.dbus = new DBus()
     
     /**
      * 
      */
     this.nodes = []
+
+    this.dbus.on('connect', () => {
+    })
   }
 
   /**
@@ -66,6 +72,8 @@ class BLE extends EventEmitter {
         // do something 
     }
   }
+
+   
 
   /**
    * ```

@@ -30,7 +30,8 @@
   },
   "scripts": {
     "jsdoc": "jsdoc src -d docs/dbus -c docs/jsdoc-md.json",
-    "test": "mocha"
+    "unit": "NODE_PATH=. nodemon --exec mocha --recursive test/",
+    "dbus": "sudo env NODE_PATH=. PATH=$(dirname $(which node)):$PATH nodemon --exec mocha --recursive dbus-test"
   },
   "repository": {
     "type": "git",

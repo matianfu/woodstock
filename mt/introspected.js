@@ -1,5 +1,5 @@
-const { STRING } = require('./src/dbus-types')
-const DBusDriver = require('./src/dbus-driver')
+const { STRING } = require('src/dbus-types')
+const DBusDriver = require('src/dbus-driver')
 
 const HEADER = `\
 <!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
@@ -51,6 +51,7 @@ driver.on('message', m => {
   if (m.type === 'METHOD_CALL') {
     if (m.interface === 'org.freedesktop.DBus.Introspectable' &&
       m.member === 'Introspect') {
+
 /**
 { le: true,
   type: 'METHOD_RETURN',
@@ -67,7 +68,7 @@ driver.on('message', m => {
 
       const xmlString = new STRING(xml)
       try {
-        driver.reply(m, { 
+        driver.methodReturn(m, { 
           signature: 's', 
           body: [new STRING(xml)] 
         })

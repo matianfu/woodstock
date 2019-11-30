@@ -2,7 +2,7 @@ const {
   LITTLE, BIG,
   BYTE, UINT32, STRING, OBJECT_PATH, SIGNATURE,
   STRUCT, ARRAY, VARIANT
-} = require('./dbus-types')
+} = require('./types')
 
 /**
  * This module provides low-level for encoding or decoding
@@ -218,32 +218,23 @@ const headerField = (key, value) => {
  * @returns {Buffer} encoded message in wire format
  */
 const encode = (m, serial, name = '') => {
-  console.log(m)
-
   const headerBuf = Buffer.alloc(1024 * 1024)
   const bodyBuf = Buffer.alloc(1024 * 1024)
 
   /** header */
   const header = new STRUCT('(yyyyuua(yv))')
-
   /** header fields */
   const fields = new ARRAY('a(yv)')
-
   /** endianness */
   header.push(new BYTE(LITTLE))
-
   /** message type */
   header.push(new BYTE(encodeType(m.type)))
-
   /** flags */
   header.push(new BYTE(encodeFlags(m.flags)))
-
   /** protocol version */
   header.push(new BYTE(0x01))
 
   const body = m.body && new STRUCT(m.body)
-
-
 
   const bodyLength = m.body ? body.marshal(bodyBuf, 0, LITTLE) : 0
 
@@ -286,12 +277,6 @@ const encode = (m, serial, name = '') => {
   }
 
   const sig = body && (body.signature()).slice(1, -1)
-
-if (body) {
-  console.log('======')
-  console.log(body)
-  console.log('======')
-}
 
   /** check m.signature if provided */
   if (sig && m.sig && sig !== m.sig) {

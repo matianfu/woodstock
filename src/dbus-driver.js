@@ -123,7 +123,7 @@ class DBusDriver extends EventEmitter {
           this.invoke({
             destination: 'org.freedesktop.DBus',
             path: '/org/freedesktop/DBus',
-            interface: 'org.freedesktop.DBus',
+            'interface': 'org.freedesktop.DBus',
             member: 'Hello'
           }, (err, body) => {
             if (err) {
@@ -161,11 +161,11 @@ class DBusDriver extends EventEmitter {
     }
   }
 
+  /**
+   * low level send message to dbus
+   */
   send (m) {
     const serial = this.serial++
-
-    console.log(serial, this.myName)
-
     const wired = encode(m, serial, this.myName)
     this.socket.write(wired)
     if (m.debug) {
@@ -199,10 +199,6 @@ class DBusDriver extends EventEmitter {
   }
 
   handleMessage (m) {
-    
-
-    console.log('message', m)
-
     if (m.type === 'METHOD_CALL') {
       this.emit('message', m)
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
@@ -235,6 +231,34 @@ class DBusDriver extends EventEmitter {
         this.emit('signal', m)
       }
     }
+  }
+
+  /**
+   * Replies a METHOD_RETURN message
+   *
+   * `signature` and `body` must be provided together
+   *
+   * @param {object} m - invocation message
+   * @param {object} opts - options
+   * @param {string} [signature] - signature for returned data
+   * @param {TYPE[]} [body] - returned data
+   */
+  reply (m, opts = {}) {
+    const r = {
+      debug: !!opts.debug,
+      decode: !!opts.decode,
+      type: 'METHOD_RETURN',
+      flags: { noReply: true },
+      destination: m.sender,
+      replySerial: m.serial,
+    }
+
+    if (opts.signature) {
+      r.signature = opts.signature
+      r.body = opts.body
+    } 
+
+    this.send(r)
   }
 }
 

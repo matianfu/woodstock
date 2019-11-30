@@ -66,26 +66,11 @@ driver.on('message', m => {
 */
 
       const xmlString = new STRING(xml)
-      console.log('xmlString', xmlString)
-    
-      const rep = {
-        // type: 'METHOD_RETURN',
-        flags: { noReply: true },
-        // version: 1,
-        // path: '/',
-        // interface: 'org.freedesktop.DBus.Introspectable',
-        // member: 'Introspect',
-        destination: m.sender,
-        replySerial: m.serial,
-        signature: 's',
-        // body: [new STRING(xml)]
-        body: [new STRING(xml)],
-        debug: true,
-        decode: true
-      } 
-
       try {
-        driver.reply(rep)
+        driver.reply(m, { 
+          signature: 's', 
+          body: [new STRING(xml)] 
+        })
       } catch (e) {
         console.log(e)
       }

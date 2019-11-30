@@ -1073,6 +1073,7 @@ module.exports = {
   STRING,
   OBJECT_PATH,
   SIGNATURE,
+  CONTAINER_TYPE,
   ARRAY,
   STRUCT,
   DICT_ENTRY,

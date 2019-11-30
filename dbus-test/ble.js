@@ -5,6 +5,7 @@ const expect = chai.expect
 
 const DBus = require('src/dbus')
 const BLE = require('src/ble')
+const { CONTAINER_TYPE } = require('src/types')
 
 describe(path.basename(__filename), () => {
   it('introspect root', done => {
@@ -34,9 +35,13 @@ describe(path.basename(__filename), () => {
             if (ele.elems[1].elems.length) {
               const els = ele.elems[1].elems
               els.forEach(el => {
+
+                const v = el.elems[1].elems[1]
+
                 console.log('    ', 
                   el.elems[0].value,
-                  el.elems[1].elems[1])
+                  v instanceof CONTAINER_TYPE 
+                    ? v.elems.map(x => x.value) : v.value)
               })
             }
           })

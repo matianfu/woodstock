@@ -3,6 +3,8 @@ const EventEmitter = require('events')
 /**
  * BLE implements a BLE service
  *
+ *
+ *
  * @emits written
  */
 class BLE extends EventEmitter {

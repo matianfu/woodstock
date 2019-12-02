@@ -37,7 +37,7 @@ const slice = (sig, start, end) => {
         } else if (sig[i] === ')') {
           if (!--count) {
             // validate
-            explode(sig, start + 1, i)
+            split(sig, start + 1, i)
             return sig.slice(start, i + 1)
           }
         }
@@ -54,7 +54,7 @@ const slice = (sig, start, end) => {
           count++
         } else if (sig[i] === '}') {
           if (!--count) {
-            const list = explode(sig, start + 1, i)
+            const list = split(sig, start + 1, i)
             if (list.length !== 2) {
               throw new Error(`not two single complete types at position ${start}`)
             }
@@ -75,13 +75,13 @@ const slice = (sig, start, end) => {
 }
 
 /**
- * explode a list of complete types
+ * split a list of complete types
  *
  * @param {string} sig - signature string (or sub string)
  * @param {number} start - start position, inclusive
  * @param {number} end - end positin, exclusive
  */
-const explode = (sig, start, end) => {
+const split = (sig, start, end) => {
   if (typeof sig !== 'string') {
     throw new TypeError('sig not a string')
   }
@@ -123,4 +123,4 @@ const explode = (sig, start, end) => {
   return list
 }
 
-module.exports = { explode, slice }
+module.exports = { split, slice }

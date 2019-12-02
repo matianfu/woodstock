@@ -1,5 +1,5 @@
 const debug = require('debug')
-const { explode, slice } = require('./signature')
+const { split, slice } = require('./signature')
 
 const log = debug('dbus:types')
 const logm = debug('marshal')
@@ -628,7 +628,7 @@ const SIGNATURE = DEC({ code: 'g', align: 1 })(
 
     unmarshal (buf, offset, le) {
       offset = super.unmarshal(buf, offset, le)
-      explode(this.value)
+      split(this.value)
       return offset
     }
   })
@@ -860,7 +860,7 @@ const STRUCT = DEC({ code: '(', align: 8 })(
   class STRUCT extends CONTAINER_TYPE {
     constructBySignature (sig) {
       if (!/^\(.+\)$/.test(sig)) throw new Error('invalid STRUCT signature')
-      this.esigs = explode(sig.slice(1, sig.length - 1))
+      this.esigs = split(sig.slice(1, sig.length - 1))
       this.sig = sig
       this.elems = []
     }
@@ -919,7 +919,7 @@ const DICT_ENTRY = DEC({ code: '{', align: 8 })(
   class DICT_ENTRY extends STRUCT {
     constructBySignature (sig) {
       if (!/^\{.+\}$/.test(sig)) throw new Error('invalid DICT_ENTRY signature')
-      const esigs = explode(sig.slice(1, sig.length - 1))
+      const esigs = split(sig.slice(1, sig.length - 1))
       if (esigs.length !== 2) {
         throw new Error('dict entry requires exactly two elements as key value')
       } else if (!basicTypeCodes.includes(esigs[0])) {
@@ -954,7 +954,7 @@ const DICT_ENTRY = DEC({ code: '{', align: 8 })(
       }
 
       this.sig = sig
-      const esigs = explode(sig.slice(1, sig.length - 1))
+      const esigs = split(sig.slice(1, sig.length - 1))
       if (values.length !== 2 || esigs.length !== 2) {
         throw new Error('dict entry requires exactly two elements as key value')
       }

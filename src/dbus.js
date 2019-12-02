@@ -552,7 +552,6 @@ class DBus extends EventEmitter {
    * Adds an implementation into pool
    */
   addImplementation (impl) {
-    
   }
 
   /**

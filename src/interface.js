@@ -1,10 +1,81 @@
 const { split } = require('./signature')
 
 /**
- * A method arg has:
- * - name, string, optional, empty string allowed
- * - type, string, must be valid multiple complete type signature
- * - direction, string, either in or out
+ * An interface object is a JavaScript object literal DEFINING
+ * a DBus interface. It is a schema, not an implementation or a base class.
+ *
+ * This module provides a set of methods for normalizing a definition.
+ *
+ * Each method accepts a type of object, validates properties, and
+ * sets default value if the property is optional.
+ *
+ * An interface object looks like:
+ *
+ * ```JavaScript
+ * {
+ *   name: 'string',
+ *   methods: [
+ *     {
+ *       name: 'string',
+ *       args: [
+ *         {
+ *           name: 'string',      // optional
+ *           type: 'string',      // DBus data type signature,
+ *                                // single complete type
+ *           direction: 'string', // "in" or "out"
+ *         }
+ *       ],
+ *       optional: true
+ *     }
+ *   ],
+ *   properties: [
+ *     {
+ *       name: 'string',
+ *       type: 'string',          // DBus data type signature,
+ *                                // single complete type
+ *       access: 'read',          // read, write, or readwrite
+ *       optional: true
+ *     }
+ *   ],
+ *   signals: [
+ *     {
+ *       name: 'string',
+ *       args: [
+ *         {
+ *           name: 'string',      // optional
+ *           type: 'string',      // DBus data type signature,
+ *                                // single complete type
+ *         }
+ *       ],
+ *       optional: true
+ *     }
+ *   ]
+ * }
+ * ```
+ *
+ * @module
+ */
+
+/**
+ * @typedef {object} MethodArg
+ * @property {string} [name] - arg name
+ * @property {string} type - DBus data type signature, single complete
+ * @property {string} direction - "in" or "out"
+ */
+
+/**
+ * @typedef NormalizedMethodArg
+ * @property {string} name - arg name, may be empty ("")
+ * @property {string} type - DBus data type signature
+ * @property {string} direction - "in" or "out"
+ */
+
+/**
+ * Normalize a method arg
+ *
+ * @param {MethodArg} arg
+ * @returns {NormalizedMethodArg} - normalized method arg
+ * @throws {TypeError|RangeError}
  */
 const normalizeMethodArg = arg => {
   arg = arg || {}
@@ -51,9 +122,25 @@ const normalizeMethodArg = arg => {
 }
 
 /**
- * A method has a name and args
- * - name is a non-empty string
- * - args is an array of method args
+ * @typedef {object} Method
+ * @property {string} name - method name
+ * @property {MethodArg[]} args - arg list
+ * @property {boolean} [optional] - could be implemented optionally
+ */
+
+/**
+ * @typedef {object} NormalizedMethod
+ * @property {string} name - method name
+ * @property {NormalizedMethodArg[]} args - arg list
+ * @property {boolean} optional - could be implemented optionally
+ */
+
+/**
+ * Normalizes a method
+ *
+ * @param {Method} method
+ * @returns {NormalizedMethod}
+ * @throws {TypeError|RangeError}
  */
 const normalizeMethod = method => {
   method = method || {}
@@ -85,7 +172,29 @@ const normalizeMethod = method => {
 }
 
 /**
- * A Property must have a name, a dbus data type, access, and optional
+ * @typedef {object} Property
+ * @property {string} name        - property name
+ * @property {string} type        - DBus data type signature, single complete type
+ * @property {string} access      - "read", "write", or "readwrite"
+ * @property {boolean} [optional] - if true, the implementation may not have this
+ *                                  member
+ */
+
+/**
+ * @typedef {object} NormalizedProperty
+ * @property {string} name        - property name
+ * @property {string} type        - DBus data type signature, single complete type
+ * @property {string} access      - "read", "write", or "readwrite"
+ * @property {boolean} optional   - if true, the implementation may not have this
+ *                                  member
+ */
+
+/**
+ * Normalizes a Property
+ *
+ * @param {Property} prop
+ * @returns {NormalizedProperty}
+ * @throws {TypeError|RangeError}
  */
 const normalizeProperty = prop => {
   prop = prop || {}
@@ -142,9 +251,23 @@ const normalizeProperty = prop => {
 }
 
 /**
- * A signal arg has:
- * - name, string, optional, empty string allowed
- * - type, string, must be valid single complete type
+ * @typedef {object} SignalArg
+ * @property {string} [name] - arg name
+ * @property {string} type - DBus data type signature, single complete type
+ */
+
+/**
+ * @typedef {object} NormalizedSignalArg
+ * @property {string} name - arg name, may be empty string
+ * @property {string} type - DBus data type signature, single complete type
+ */
+
+/**
+ * Normalizes a signal arg
+ *
+ * @param {SignalArg} arg
+ * @returns {NormalziedSignalArg}
+ * @throws {TypeError|RangeError}
  */
 const normalizeSignalArg = arg => {
   arg = arg || {}
@@ -182,7 +305,25 @@ const normalizeSignalArg = arg => {
 }
 
 /**
+ * @typedef {objet} Signal
+ * @property {string} name
+ * @property {SignalArg[]} [args]
+ * @property {boolean} [optional]
+ */
+
+/**
+ * @typedef {objet} NormalizedSignal
+ * @property {string} name
+ * @property {SignalArg[]} args
+ * @property {boolean} optional
+ */
+
+/**
+ * Normalizes signal
  *
+ * @param {Signal} signal
+ * @returns {NormalizedSignal}
+ * @throws {TypeError|RangeError}
  */
 const normalizeSignal = signal => {
   signal = signal || {}
@@ -211,8 +352,27 @@ const normalizeSignal = signal => {
 }
 
 /**
+ * @typedef {object} Interface
+ * @property {string} name - interface name, eg. org.freedesktop.DBus.Properties
+ * @property {Method[]} [methods]
+ * @property {Property[]} [properties]
+ * @property {Signal[]} [signals]
+ */
+
+/**
+ * @typedef {object} NormalizedInterface
+ * @property {string} name - interface name, eg. org.freedesktop.DBus.Properties
+ * @property {NormalizedMethod[]} methods
+ * @property {NormalizedProperty[]} properties
+ * @property {NormalizedSignal[]} signals
+ */
+
+/**
+ * Normalizes a DBus interface definition
  *
- *
+ * @param {Interface}
+ * @returns {NormalizedInterface}
+ * @throws {TypeError|RangeError}
  */
 const normalize = iface => {
   iface = iface || {}

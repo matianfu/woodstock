@@ -1,3 +1,35 @@
+// see https://git.kernel.org/pub/scm/bluetooth/bluez.git/tree/test/example-advertisement
+
+/**
+ * Example code in python.
+ *
+ * ```Python
+ * def get_properties(self):
+ *     properties = dict()
+ *     properties['Type'] = self.ad_type
+ *     if self.service_uuids is not None:
+ *         properties['ServiceUUIDs'] = dbus.Array(self.service_uuids,
+ *                                                 signature='s')
+ *     if self.solicit_uuids is not None:
+ *         properties['SolicitUUIDs'] = dbus.Array(self.solicit_uuids,
+ *                                                 signature='s')
+ *     if self.manufacturer_data is not None:
+ *         properties['ManufacturerData'] = dbus.Dictionary(
+ *             self.manufacturer_data, signature='qv')
+ *     if self.service_data is not None:
+ *         properties['ServiceData'] = dbus.Dictionary(self.service_data,
+ *                                                     signature='sv')
+ *     if self.local_name is not None:
+ *         properties['LocalName'] = dbus.String(self.local_name)
+ *     if self.include_tx_power is not None:
+ *         properties['IncludeTxPower'] = dbus.Boolean(self.include_tx_power)
+ * 
+ *     if self.data is not None:
+ *         properties['Data'] = dbus.Dictionary(
+ *             self.data, signature='yv')
+ *     return {LE_ADVERTISEMENT_IFACE: properties}
+ * ```
+ */
 module.exports = {
   name: 'org.bluez.LEAdertisement1',
   methods: [
@@ -8,59 +40,87 @@ module.exports = {
   ],
   properties: [
     {
-      // "broadcast" or "peripheral"
       name: 'Type', 
-      type: 's',
+      type: 's',                // string, "broadcast" or "peripheral"
       access: 'read',
-      optional: true
     },
     {
       name: 'ServiceUUIDs',
-      type: 'as',
-      access: 'read'
-      optional: true
-    },
-    {
-      name: 'ManufacturerData', // DICT ???
-    },
-    {
-      name: 'SolicitUUIDs',
-      type: 'as',
+      type: 'as',               // array{string}
       access: 'read',
       optional: true
     },
     {
-      name: 'ServiceData',  // DICT ???
-      
+      name: 'ManufacturerData',
+      type: 'a{qv}',            // DICT, 0xffff, byte....
+      access: 'read',
+      optional: true
     },
     {
-      name: 'Data'
+      name: 'SolicitUUIDs',
+      type: 'as',               // array{string}
+      access: 'read',
+      optional: true
     },
     {
-      name: 'Discoverable'
+      name: 'ServiceData',
+      type: 'a{sv}',            // DICT, see offiial example
+      access: 'read',
+      optional: true
     },
     {
-      name: 'DiscoverableTimeout'
+      name: 'Data',
+      type: 'a{yv}',            // DICT, see official example
+      access: 'read',
+      optional: true
     },
     {
-      name: 'Includes'
+      name: 'Discoverable',
+      type: 'b',                // boolean
+      access: 'read',
+      optional: true
+    },
+    {
+      name: 'DiscoverableTimeout',
+      type: 'q',                // uint16
+      access: 'read',
+      optional: true
+    },
+    {
+      name: 'Includes',
+      type: 'as',               // array{string}
+      access: 'read',
+      optional: true
     },
     {
       name: 'LocalName',
-      type: 's',
-      access: 'read'
+      type: 's',                // string
+      access: 'read',
+      optional: true
     },
     {
       name: 'Appearance',
+      type: 'q',                // uint16
+      access: 'read',
+      optional: true
     },
     {
-      name: 'Duration'
+      name: 'Duration',
+      type: 'q',                // uint16
+      access: 'read',
+      optional: true
     },
     {
-      name: 'Timeout'
+      name: 'Timeout',
+      type: 'q',                // uint16 
+      access: 'read',
+      optional: true
     },
     {
-      name: 'SecondaryChannel'
+      name: 'SecondaryChannel',
+      type: 's',                // string
+      access: 'read',
+      optional: true
     }
   ]
 }

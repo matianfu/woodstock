@@ -1,4 +1,5 @@
 module.exports = {
+  name: 'org.bluez.GattCharacteristic1',
   methods: [
     {
       name: 'ReadValue',
@@ -39,7 +40,7 @@ module.exports = {
     { name: 'UUID', type: 's', access: 'read' },
     { name: 'Service', type: 'o', access: 'read' },
     { name: 'Value', type: 'ay', access: 'read', optional: true },
-    { name: 'WriteAcquired', type: 'b', acess: 'read', optional: true },
+    { name: 'WriteAcquired', type: 'b', access: 'read', optional: true },
     { name: 'NotifyAcquired', type: 'b', access: 'read', optional: true },
     { name: 'Notifying', type: 'b', access: 'read', optional: true },
     { name: 'Flags', type: 'as', access: 'read' },

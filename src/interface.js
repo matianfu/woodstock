@@ -245,6 +245,7 @@ const normalizeProperty = prop => {
   }
 
   if (access !== 'read' && access !== 'write' && access !== 'readwrite') {
+    console.log('000000000000', prop)
     throw new RangeError('invalid property access')
   }
 

@@ -6,7 +6,7 @@ module.exports = {
       args: [
         { name: 'intreface_name', type: 's', direction: 'in' },
         { name: 'property_name', type: 's', direction: 'in' },
-        { name: 'value', type: 'v', direction, 'out' }
+        { name: 'value', type: 'v', direction: 'out' }
       ]
     },
     {
@@ -14,7 +14,7 @@ module.exports = {
       args: [
         { name: 'interface_name', type: 's', direction: 'in' },
         { name: 'property_name', type: 's', direction: 'in' },
-        { name; 'value', type: 'v', direction: 'in' }
+        { name: 'value', type: 'v', direction: 'in' }
       ]
     },
     {

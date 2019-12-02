@@ -168,7 +168,12 @@ const normalizeMethod = method => {
     throw new RangeError('method has multiple out args')
   }
 
-  return { name, args }
+  const optional = method.optional || false
+  if (typeof optional !== 'boolean') {
+    throw new TypeError('method optional not a boolean')
+  }
+
+  return { name, args, optional }
 }
 
 /**
@@ -348,7 +353,12 @@ const normalizeSignal = signal => {
 
   const args = as.map(a => normalizeSignalArg(a))
 
-  return { name, args }
+  const optional = signal.optional || false
+  if (typeof optional !== 'boolean') {
+    throw new TypeError('signal optional not a boolean')
+  }
+
+  return { name, args, optional }
 }
 
 /**
@@ -378,34 +388,34 @@ const normalize = iface => {
   iface = iface || {}
 
   if (typeof iface !== 'object') {
-    throw new TypeError('iface not an object')
+    throw new TypeError('interface not an object')
   }
 
   const name = iface.name || ''
   if (typeof name !== 'string') {
-    throw new TypeError('name not a string')
+    throw new TypeError('interface name not a string')
   }
 
   if (!name) {
-    throw new RangeError('name not defined')
+    throw new RangeError('interface name not defined')
   }
 
   const ms = iface.methods || []
   if (!Array.isArray(ms)) {
-    throw new TypeError('methods not an array')
+    throw new TypeError('interface methods not an array')
   }
 
   const methods = ms.map(m => normalizeMethod(m))
 
   const ps = iface.properties || []
   if (!Array.isArray(ps)) {
-    throw new TypeError('properties not an array')
+    throw new TypeError('interface properties not an array')
   }
   const properties = ps.map(p => normalizeProperty(p))
 
   const ss = iface.signals || []
   if (!Array.isArray(ss)) {
-    throw new TypeError('signals not an array')
+    throw new TypeError('interface signals not an array')
   }
 
   const signals = ss.map(s => normalizeSignal(s))
@@ -415,6 +425,10 @@ const normalize = iface => {
     ...properties.map(p => p.name),
     ...signals.map(s => s.name)
   ]
+
+  if (names.length !== new Set(names).size) {
+    throw new RangeError('interface members have duplicate name')
+  }
 
   return { name, methods, properties, signals }
 }

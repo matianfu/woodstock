@@ -132,27 +132,37 @@ describe(path.basename(__filename) + ', normalizeMethod()', () => {
     done()
   })
 
-  it('should parse a valid method with args', done => {
+  it('TypeError "method optional not a boolean" if optional is "hello"', 
+    done => {
+      const f = () => normalizeMethod({ name: 'hello', optional: 'hello' })
+      expect(f).to.throw(TypeError, 'method optional not a boolean') 
+      done()
+    })
+
+  it('should normalize a valid method with args and optional', done => {
     expect((normalizeMethod({
       name: 'hello',
       args: [
         { type: 'ay', direction: 'in' },
         { type: 'ay', direction: 'out' }
-      ]
+      ],
+      optional: true 
     }))).to.deep.equal({
       name: 'hello',
       args: [
         { name: '', type: 'ay', direction: 'in' },
         { name: '', type: 'ay', direction: 'out' }
-      ]
+      ],
+      optional: true
     })
     done()
   })
 
-  it('should parse a valid method without args', done => {
+  it('should parse a valid method without args and optioal', done => {
     expect((normalizeMethod({ name: 'hello' }))).to.deep.equal({
       name: 'hello',
-      args: []
+      args: [],
+      optional: false
     })
     done()
   })
@@ -326,94 +336,101 @@ describe(path.basename(__filename) + ', normalizeSignal()', () => {
     done()
   })
 
-  it('should normalize a valid signal with args', done => {
+  it('TypeError "signal optional not a boolean" if it is "hello"', done => {
+    const f = () => normalizeSignal({ name: 'hello', optional: 'hello' })
+    expect(f).to.throw(TypeError, 'signal optional not a boolean')
+    done()
+  })
+
+  it('should normalize a valid signal with args and optional', done => {
     expect((normalizeSignal({
       name: 'hello',
       args: [
         { type: 'ay' },
         { type: 'ay' }
-      ]
+      ],
+      optional: true
     }))).to.deep.equal({
       name: 'hello',
       args: [
         { name: '', type: 'ay' },
         { name: '', type: 'ay' }
-      ]
+      ],
+      optional: true
     })
     done()
   })
 
-  it('should normalize a valid signal without args', done => {
-    expect((normalizeMethod({
+  it('should normalize a valid signal without args and optional', done => {
+    expect((normalizeSignal({
       name: 'hello'
     }))).to.deep.equal({
       name: 'hello',
-      args: []
+      args: [],
+      optional: false
     })
     done()
   })
 })
 
 describe(path.basename(__filename) + ', normalize()', () => {
-  it('throws TypeError not an object for "hello"', done => {
+  it('TypeError "interface not an object" if it is "hello"', done => {
     const f = () => normalize('hello')
-    expect(f).to.throw(TypeError, 'not an object')
+    expect(f).to.throw(TypeError, 'interface not an object')
     done()
   })
 
-  it('throws RangeError if iface.name not defined', done => {
-    const f = () => normalize({})
-    expect(f).to.throw(RangeError, 'name not defined')
-    done()
-  })
-
-  it('throws TypeError if iface.name is true', done => {
+  it('TypeError "interface name not a string" if it is true', done => {
     const f = () => normalize({ name: true })
-    expect(f).to.throw(TypeError, 'name not a string')
+    expect(f).to.throw(TypeError, 'interface name not a string')
     done()
   })
 
-  it('throws TypeError if iface.methods is true', done => {
+  it('RangeError "interface name not defined" if interface has no name', 
+    done => {
+      const f = () => normalize({})
+      expect(f).to.throw(RangeError, 'interface name not defined')
+      done()
+    })
+
+  it('TypeError "interface methods not an array" if is true', done => {
     const f = () => normalize({ name: 'a', methods: true })
-    expect(f).to.throw(TypeError, 'methods not an array')
+    expect(f).to.throw(TypeError, 'interface methods not an array')
     done()
   })
 
-  it('throws TypeError if method.name not defined', done => {
-    const f = () => normalize({
-      name: 'a', methods: [{}]
-    })
-    expect(f).to.throw(RangeError, 'method name not defined')
-    done()
-  })
-
-  it('throws TypeError if method.name is true', done => {
-    const f = () => normalize({
-      name: 'a',
-      methods: [{ name: true }]
-    })
-    expect(f).to.throw(TypeError, 'method name not a string')
-    done()
-  })
-
-  it('thorws TypeError if method args is true', done => {
-    const f = () => normalize({
-      name: 'a',
-      methods: [{ name: 'a', args: true }]
-    })
-    expect(f).to.throw(TypeError, 'method args not an array')
-    done()
-  })
-
-  it('throws TypeError if iface.properties is true', done => {
+  it('TypeError "interface properties not an array" if it is true', done => {
     const f = () => normalize({ name: 'a', properties: true })
-    expect(f).to.throw(TypeError, 'properties not an array')
+    expect(f).to.throw(TypeError, 'interface properties not an array')
     done()
   })
 
-  it('throws TypeError if iface.signals is true', done => {
+  it('TypeError "interface signals not an array" if it is true', done => {
     const f = () => normalize({ name: 'a', signals: true })
-    expect(f).to.throw(TypeError, 'signals not an array')
+    expect(f).to.throw(TypeError, 'interface signals not an array')
+    done()
+  })
+
+  it('RangeError "interface members have duplicate name"', done => {
+    const f = () => normalize({ 
+      name: 'a',
+      methods: [ { name: 'Hello' } ],
+      properties: [ { name: 'Hello', type: 'ay', access: 'read' } ]
+    })
+
+    expect(f).to.throw(RangeError, 'interface members have duplicate name')
+    done()
+  })
+
+  it('should normalize an empty interface definition', done => {
+    expect(normalize({
+      name: 'hello',
+    })).to.deep.equal({
+      name: 'hello',
+      methods: [],
+      properties: [],
+      signals: []
+    })
     done()
   })
 })

@@ -6,7 +6,7 @@ const expect = chai.expect
 const { STRING } = require('src/types')
 const DBus = require('src/dbus')
 const PeerIntf = require('src/interfaces/org.freedesktop.DBus.Peer.js')
-const PeerImpl = require('src/implementations/org.freedesktop.DBus.Peer.js')
+const PeerImpl = require('src/impls/org.freedesktop.DBus.Peer.js')
 
 describe(path.basename(__filename), () => {
   it('Ping should return nothing', done => {

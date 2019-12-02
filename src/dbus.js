@@ -6,6 +6,7 @@ const debug = require('debug')('dbus-driver')
 const parseXml = require('./parse-xml')
 const { STRING } = require('./types')
 const { encode, decode } = require('./wire')
+const normalizeInterface = require('./interface')
 
 const print = buf => {
   while (buf.length) {
@@ -509,41 +510,6 @@ class DBus extends EventEmitter {
         // TODO
         console.log(e)
       })
-  }
-
-  /**
-   * - args must be an array of non-null object
-   * - arg must have a direction, 'in' or 'out'
-   * - arg must have a type, a valid DBus type signature (single complete)
-   */
-  validateMethodArgs (args) {
-    if (!Array.isArray(args)) {
-      throw new TypeError(`args not an array, ${args}`)
-    }
-
-    args.forEach(arg => {
-      if (!arg || typeof arg !== 'object') {
-        throw new TypeError('arg not an object')
-      }
-
-      if (arg.direction !== 'in' && arg.direction !== 'out') {
-        throw new RangeError('invalid direction')
-      }
-
-      if (typeof arg.type !== 'string') {
-        throw new TypeError('type not a string')
-      }
-
-      // TODO
-    })
-  }
-
-  /**
-   * - Each method must have a name
-   * - Each method must
-   */
-  validateMethod (method) {
-    // TODO
   }
 
   /**

@@ -6,8 +6,8 @@ const { split } = require('./signature')
  *
  * This module provides a set of methods for normalizing a definition.
  *
- * Each method accepts a type of object, validates properties, and
- * sets default value if the property is optional.
+ * Each method accepts a type of object, validates its properties,
+ * sets default value if the property is optional, and returns a normalized one.
  *
  * An interface object looks like:
  *

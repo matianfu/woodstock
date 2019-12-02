@@ -5,7 +5,7 @@ const debug = require('debug')('dbus-driver')
 
 const parseXml = require('./parse-xml')
 const { STRING } = require('./types')
-const { encode, decode } = require('./dbus-codec')
+const { encode, decode } = require('./wire')
 
 const print = buf => {
   while (buf.length) {

@@ -14,6 +14,7 @@ const print = buf => {
   }
 }
 
+const ERR_UNKNOWN_OBJECT = 'org.freedesktop.DBus.Error.UnknownObject'
 
 /**
 an example error
@@ -32,6 +33,50 @@ an example error
         'org.freedesktop.DBus does not understand message GetManagedObjects' } ] }
 
 */
+
+/**
+ * DBus has a compact and versatile design to allow the user to
+ * communicate with other dbus services as well as exposing custom
+ * services to the bus.
+ *
+ * ### Providing a service
+ *
+ * + interface definition must be added first.
+ * + interface implementation could be added.
+ * + add node with an object path and a collection of implementations. If the
+ * default implementation is used, providing a name is enough.
+ *
+ * When building a service object, all interface methods and properties will
+ * be named to '${interface_name}.${method_name}', for example:
+ *
+ * - `org.freedesktop.DBus.Properties.Get`
+ * - `org.bluez.GattCharacteristic1.UUID`
+ *
+ * All methods have the same signature:
+ *
+ * ```
+ * async Method (m) {} -> TYPE object or undefined
+ * ```
+ *
+ * invoking a method on another interface:
+ *
+ * ```
+ * this["org.freedesktop.DBus.Properties.Set"](m) 
+ * ```
+ *
+ * `org.freedesktop.DBus.Properties.PropertiesChange'
+ *
+ *
+ * Second, all (provided) interfaces must be understood by this container
+ * class, including the schema and default implementations of all methods
+ * and signal.
+ *
+ * First, each DBus object (node) is build by the container, not a `new`
+ * or a factory method. The container can construct all required properties
+ * in a literal way.
+ *
+ * @module DBus
+ */
 
 /**
  * DBus communicates with system dbus.
@@ -58,17 +103,30 @@ class DBus extends EventEmitter {
    * @param {object} opts
    * @param {string} role - helper name for testing and debugging
    * @param {string} opts.address - socket address (path)
+   * @param {object[]} opts.interfaces - interfaces
+   * @param {object[]} opts.implementations - default implementations
    */
   constructor (opts = {}) {
     super()
 
+    /**
+     *
+     */
     this.role = opts.role
 
     /**
      *
      */
-    this.interfaces = []
+    this.interfaces = opts.interfaces || []
 
+    /**
+     *
+     */
+    this.implementations = opts.implementations || []
+
+    /**
+     *
+     */
     this.nodes = []
 
     /**
@@ -78,7 +136,7 @@ class DBus extends EventEmitter {
     this.callMap = new Map()
 
     /**
-     * DBus connection name of this instance, 
+     * DBus connection name of this instance,
      * set by org.freedesktop.DBus in Hello
      * @type {string}
      */
@@ -86,6 +144,7 @@ class DBus extends EventEmitter {
 
     /**
      * Machine id is provided by systemd (/etc/machine-id)
+     *
      * @type {string}
      */
     this.machineId = ''
@@ -224,7 +283,7 @@ class DBus extends EventEmitter {
   }
 
   /**
-   *
+   * send a method call
    */
   methodCall (m, callback = () => {}) {
     if (typeof m !== 'object') {
@@ -295,6 +354,10 @@ class DBus extends EventEmitter {
     }
   }
 
+  onSignal (m) {
+    console.log(m)
+  }
+
   /**
    * Sends a METHOD_RETURN message
    *
@@ -308,7 +371,6 @@ class DBus extends EventEmitter {
    * @parma {boolean} [opts.decode] - debug
    */
   methodReturn (m, opts = {}) {
-    // TODO validate
     const r = {
       debug: !!opts.debug,
       decode: !!opts.decode,
@@ -330,8 +392,14 @@ class DBus extends EventEmitter {
    *
    */
   errorReturn (m, opts = {}) {
-    // TODO validate
     const e = {
+      type: 'ERROR',
+      flags: { noReply: true },
+      destination: m.sender,
+      errorName: opts.errorName,
+      replySerial: m.serial,
+      signature: 's',
+      body: [new STRING(opts.msg)]
     }
 
     this.send(e)
@@ -372,9 +440,20 @@ class DBus extends EventEmitter {
     })
   }
 
+  /**
+   * Handle an incoming METHOD_CALL
+   *
+   * - find object by path
+   * - check whether the object has the interface
+   * - check whether the interface has the member (method)
+   * - verify the input signature
+   * - retrieve the implementation and invoke it
+   * - reply an METHOD_RETURN or an ERROR
+   */
   handleMethodCall (m) {
-    console.log(this.role || this.myName, 'handleMethodCall', m)
-    const node = this.nodes.find(n => n.path === m.path) 
+    // console.log(this.role || this.myName, 'handleMethodCall', m)
+
+    const node = this.nodes.find(n => n.path === m.path)
     if (!node) {
       // org.freedesktop.DBus.Error.UnknownObject
       this.send({
@@ -386,12 +465,139 @@ class DBus extends EventEmitter {
         signature: 's',
         body: [new STRING('object not found')]
       })
+      return
     }
 
-    const iface = this.interfaces.find(iface => iface.name === m.interface)
-    const member = iface[m.member]
+    if (!node.interfaces.includes(m.interface)) {
+      this.send({
+        type: 'ERROR',
+        flags: { noReply: true },
+        destination: m.sender,
+        errorName: 'org.freedesktop.DBus.Error.UnknownMethod',
+        replySerial: m.serial,
+        signature: 's',
+        body: [new STRING(`${m.interface} not found on this object`)]
+      })
+      return
+    }
 
-    member.apply(this, m.body)
+    const intf = this.interfaces.find(i => i.name)
+
+    const methods = intf.methods
+    const { args } = intf.methods.find(method => method.name === m.member)
+
+    const isig = args
+      ? args.filter(a => a.direction === 'in').map(a => a.type).join('')
+      : ''
+
+    const osig = args
+      ? args.filter(a => a.direction === 'out').map(a => a.type).join('')
+      : ''
+
+    const impl = this.implementations.find(i => i.interface === m.interface)
+    const method = impl[m.member]
+
+    method.call(node, m)
+      .then(data => {
+        if (osig) {
+          this.methodReturn(m, { signature: osig, body: [data] })
+        } else {
+          this.methodReturn(m)
+        }
+      })
+      .catch(e => {
+        // TODO
+        console.log(e)
+      })
+  }
+
+  /**
+   * - args must be an array of non-null object
+   * - arg must have a direction, 'in' or 'out'
+   * - arg must have a type, a valid DBus type signature (single complete)
+   */
+  validateMethodArgs (args) {
+    if (!Array.isArray(args)) {
+      throw new TypeError(`args not an array, ${args}`)
+    }
+
+    args.forEach(arg => {
+      if (!arg || typeof arg !== 'object') {
+        throw new TypeError('arg not an object')
+      }
+
+      if (arg.direction !== 'in' && arg.direction !== 'out') {
+        throw new RangeError('invalid direction')
+      }
+
+      if (typeof arg.type !== 'string') {
+        throw new TypeError('type not a string')
+      }
+
+      // TODO
+    })
+  }
+
+  /**
+   * - Each method must have a name
+   * - Each method must
+   */
+  validateMethod (method) {
+    // TODO
+  }
+
+  /**
+   * Adds an interface (schema) to interface pool.
+   *
+   * This is the only method operating on interface, validation is done here.
+   * - valid props include
+   *   - 'name', string
+   *   - 'methods', array of methods, optional
+   *   - 'properties', array of properties, optional
+   *   - 'signals', array of signals, optional
+   * - methods must have name, and optional args
+   *   - name must be unique
+   *   -
+   */
+  addInterface (iface) {
+    if (!iface || typeof iface !== 'object') {
+      throw new TypeError('not an object')
+    }
+
+    const name = iface.name
+    const methods = iface.methods || []
+    const properties = iface.properties || []
+    const signals = iface.signals || []
+
+    if (typeof name !== 'string' || !name) {
+      throw new TypeError('bad name')
+    }
+
+    if (this.interfaces.find(i => i.name === name)) {
+      throw new Error('interface name already exists')
+    }
+
+    if (!Array.isArray(methods)) {
+      throw new TypeError('methods not an array')
+    }
+  }
+
+  addImplementation (impl) {
+  }
+
+  /**
+   * @param {Array<string|number>} ifaces - an array of interfaces, if only used
+   * default iface implementation, the object could be a string
+   */
+  addNode (node) {
+    node.dbus = this
+    this.nodes.push(node)
+  }
+
+  /**
+   *
+   */
+  removeNode (path) {
   }
 }
 

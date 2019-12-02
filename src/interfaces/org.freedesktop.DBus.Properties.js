@@ -1,23 +1,28 @@
-/**
-org.freedesktop.DBus.Properties.Get (in STRING interface_name,
-                                     in STRING property_name,
-                                     out VARIANT value);
-org.freedesktop.DBus.Properties.Set (in STRING interface_name,
-                                     in STRING property_name,
-                                     in VARIANT value);
-org.freedesktop.DBus.Properties.GetAll (in STRING interface_name,
-                                        out DICT<STRING,VARIANT> props);
-*/
-
-function Get (interfaceName, propertyName, callback) {
-}
-
-function Set (interfaceName, propertyName, callback) {
-}
-
-function GetAll (interfaceName) {
-}
-
 module.exports = {
-  methods 
+  name: 'org.freedesktop.DBus.Properties',
+  methods: [
+    {
+      name: 'GET',
+      args: [
+        { name: 'intreface_name', type: 's', direction: 'in' },
+        { name: 'property_name', type: 's', direction: 'in' },
+        { name: 'value', type: 'v', direction, 'out' }
+      ]
+    },
+    {
+      name: 'SET',
+      args: [
+        { name: 'interface_name', type: 's', direction: 'in' },
+        { name: 'property_name', type: 's', direction: 'in' },
+        { name; 'value', type: 'v', direction: 'in' }
+      ]
+    },
+    {
+      name: 'GetAll',
+      args: [
+        { name: 'interface_name', type: 's', direction: 'in' },
+        { name: 'props', type: 'a{sv}', direction: 'out' }
+      ] 
+    }
+  ]
 }

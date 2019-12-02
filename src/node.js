@@ -1,8 +1,11 @@
 /**
- * Node represents a node on dbus service.
+ * Node represents a DBus object on dbus service object tree.
+ * 
  * Each node has an object path (as a key) and a collection of 
  * interfaces. Each interface has a name and a collection of properties 
  * The mandatory property must be provided.
+ *
+ * DBus object differs from a JavaScript object in that
  */
 class Node {
   /**
@@ -16,6 +19,11 @@ class Node {
     this.interfaces = [
     ]
   }
-}
 
+  invoke (iface, method) {
+  }
+
+  signal (iface, signal) {
+  }
+}
 

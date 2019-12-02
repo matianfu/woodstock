@@ -103,8 +103,8 @@ class DBus extends EventEmitter {
    * @param {object} opts
    * @param {string} role - helper name for testing and debugging
    * @param {string} opts.address - socket address (path)
-   * @param {object[]} opts.interfaces - interfaces
-   * @param {object[]} opts.implementations - default implementations
+   * @param {object[]} opts.ifaces - interfaces
+   * @param {object[]} opts.impls - default implementations
    */
   constructor (opts = {}) {
     super()
@@ -117,12 +117,12 @@ class DBus extends EventEmitter {
     /**
      *
      */
-    this.interfaces = opts.interfaces || []
+    this.ifaces = opts.ifaces || []
 
     /**
      *
      */
-    this.implementations = opts.implementations || []
+    this.impls = opts.impls || []
 
     /**
      *
@@ -468,7 +468,7 @@ class DBus extends EventEmitter {
       return
     }
 
-    if (!node.interfaces.includes(m.interface)) {
+    if (!node.ifaces.includes(m.interface)) {
       this.send({
         type: 'ERROR',
         flags: { noReply: true },
@@ -481,7 +481,7 @@ class DBus extends EventEmitter {
       return
     }
 
-    const intf = this.interfaces.find(i => i.name)
+    const intf = this.ifaces.find(i => i.name)
 
     const methods = intf.methods
     const { args } = intf.methods.find(method => method.name === m.member)
@@ -494,7 +494,7 @@ class DBus extends EventEmitter {
       ? args.filter(a => a.direction === 'out').map(a => a.type).join('')
       : ''
 
-    const impl = this.implementations.find(i => i.interface === m.interface)
+    const impl = this.impls.find(i => i.interface === m.interface)
     const method = impl[m.member]
 
     method.call(node, m)
@@ -573,7 +573,7 @@ class DBus extends EventEmitter {
       throw new TypeError('bad name')
     }
 
-    if (this.interfaces.find(i => i.name === name)) {
+    if (this.ifaces.find(i => i.name === name)) {
       throw new Error('interface name already exists')
     }
 

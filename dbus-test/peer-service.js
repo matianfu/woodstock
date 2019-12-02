@@ -11,13 +11,13 @@ const PeerImpl = require('src/implementations/org.freedesktop.DBus.Peer.js')
 describe(path.basename(__filename), () => {
   it('Ping should return nothing', done => {
     const server = new DBus({
-      interfaces: [PeerIntf],
-      implementations: [PeerImpl]
+      ifaces: [PeerIntf],
+      impls: [PeerImpl]
     })
 
     server.addNode({
       path: '/',
-      interfaces: ['org.freedesktop.DBus.Peer']
+      ifaces: ['org.freedesktop.DBus.Peer']
     })
 
     server.on('connect', () => {
@@ -46,13 +46,13 @@ describe(path.basename(__filename), () => {
 
   it('GetMachineId should return server.machineId', done => {
     const server = new DBus({
-      interfaces: [PeerIntf],
-      implementations: [PeerImpl]
+      ifaces: [PeerIntf],
+      impls: [PeerImpl]
     })
 
     server.addNode({
       path: '/',
-      interfaces: ['org.freedesktop.DBus.Peer']
+      ifaces: ['org.freedesktop.DBus.Peer']
     })
 
     server.on('connect', () => {

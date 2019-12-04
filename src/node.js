@@ -1,14 +1,3 @@
-/**
- * @typedef NormalizedImplementation
- * ```
-   {
-     interface: {
-       
-     }
-   }
- * ```
- */
-
 const { TYPE } = require('./types')
 
 
@@ -24,16 +13,23 @@ const { TYPE } = require('./types')
  */
 class Node {
   /**
-   * Constructs a Node object with given path and implementations
+   * Constructs a Node object with given bus and path
+   *
+   * @param {object} bus - reference to dbus client
+   * @param {string} path - object path
    */
-  constructor (bus, path, ) {
+  constructor (bus, path) {
+    /** reference to dbus cleint */
     this.bus = bus
+    /** object path */
     this.path = path
+    /** collection of interface implementation */
     this.implementations = []
   } 
 
   /**
-   * Add an implementation
+   * Adds an implementation
+   *  
    */
   addImplementation (impl) {
     impl.node = this 
@@ -41,6 +37,31 @@ class Node {
     this.implementations.push(impl)
   }
 
+  /**
+   * Finds implementations for given interface name
+   * @returns {object} implementation
+   * @throws {Error} if not found
+   */
+  getImplementation (interfaceName) {
+    const impl = this
+      .node
+      .implementations
+      .find(impl => impl.interface.name === interfaceName) 
+
+    if (!impl) {
+      throw 'something'
+    }
+    return impl
+  }
+
+  /**
+   * Invokes a method for given interface and method name (member)
+   * @param {object} m - message
+   * @param {string} m.interface - interface name
+   * @param {string} m.member - method name
+   * @param {string} [m.signature] - argument types
+   * @param {TYPE[]} [m.body] - arguments
+   */
   async Method (m) {
     const impl = this.implementations.find(i => i.interface.name === m.interface)
 

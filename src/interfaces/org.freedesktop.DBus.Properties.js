@@ -13,7 +13,7 @@
  * org.freedesktop.DBus.Properties.GetAll (
  *     in STRING interface_name,
  *     out DICT<STRING,VARIANT> props);
- * 
+ *
  * org.freedesktop.DBus.Properties.PropertiesChanged (
  *     STRING interface_name,
  *     DICT<STRING,VARIANT> changed_properties,
@@ -45,7 +45,7 @@ module.exports = {
       args: [
         { name: 'interface_name', type: 's', direction: 'in' },
         { name: 'props', type: 'a{sv}', direction: 'out' }
-      ] 
+      ]
     }
   ],
   signals: [
@@ -57,5 +57,5 @@ module.exports = {
         { name: 'invalidated_properties', type: 'as' }
       ]
     }
-  ] 
+  ]
 }

@@ -769,7 +769,7 @@ const ARRAY = DEC({ code: 'a', align: 4 })(
         const esig = elems[0].signature()
         if (!elems.every(e => e.signature() === esig)) {
           throw new Error('ARRAY elements must have the same signature')
-        } else if (esig !== sig.slice(1)) {
+        } else if (sig && esig !== sig.slice(1)) {
           throw new Error('ARRAY elements do not match given signature')
         }
         this.elems = elems

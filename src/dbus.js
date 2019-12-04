@@ -583,6 +583,10 @@ class DBus extends EventEmitter {
         // !!! create a new object with impl as prototype
         node.addImplementation(Object.create(impl))
       } else {
+        // TODO validate
+        const iface = this.interfaces.find(iface => iface.name === impl.interface)
+        if (!iface) throw new Error('bad interface')
+        impl.interface = iface 
         node.addImplementation(impl)
       }
     })

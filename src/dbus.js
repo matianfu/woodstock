@@ -4,7 +4,7 @@ const net = require('net')
 const debug = require('debug')('dbus-driver')
 
 const parseXml = require('./parse-xml')
-const { STRING } = require('./types')
+const { TYPE, STRING } = require('./types')
 const { encode, decode } = require('./wire')
 const normalizeInterface = require('./interface')
 const validateImplementation = require('./implementation')
@@ -52,24 +52,24 @@ an example error
  * DBus client stores a list of interface definitions internally. They
  * are used to verify an implentation and check the signature
  * when invoking a method or emitting signal.
- * 
+ *
  * An Implementation is an object implementing a specific interface,
  * providing:
  * 1. (async) functions implement interface methods.
  * 2. properties implements interface properties. They must be TYPE object.
  * 3. (async) functions implement interface signal, usually converting a JS object to TYPE
- * 
+ *
  * An interface definition must be added first, before adding
  * an implementation or a node referring to it.
  *
- * Commonly used standard interfaces, such as Peer, Properties, 
- * ObjectManager, and Introspectable, have no states (properties). 
- * They are recommended to be implemented as JavaScript object literal, 
+ * Commonly used standard interfaces, such as Peer, Properties,
+ * ObjectManager, and Introspectable, have no states (properties).
+ * They are recommended to be implemented as JavaScript object literal,
  * eliminating unneccessary class inheritance, and added to dbus client
  * via constructor.
  *
  * For application-specific interfaces holding states (properties),
- *  
+ *
  *
  * ```
  * async Method (m) {} -> TYPE object or undefined
@@ -78,7 +78,7 @@ an example error
  * invoking a method on another interface:
  *
  * ```
- * this["org.freedesktop.DBus.Properties.Set"](m) 
+ * this["org.freedesktop.DBus.Properties.Set"](m)
  * ```
  *
  * `org.freedesktop.DBus.Properties.PropertiesChange'
@@ -138,10 +138,9 @@ class DBus extends EventEmitter {
     if (opts.interfaces) {
       if (!Array.isArray(opts.interfaces)) {
         throw new TypeError('interfaces not an array')
-      } 
+      }
       opts.interfaces.forEach(iface => this.addInterface(iface))
     }
-
 
     /**
      *
@@ -389,33 +388,54 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * Sends a METHOD_RETURN message
+   * Formats method call result to a METHOD_RETURN message
    *
-   * `signature` and `body` must be provided together if provided.
+   * If result is unwrapped, it is either undefined or a TYPE object.
+   * If it is wrapped, the wrapped object has a prop named 'result'.
+   * It is permissive to allow other props passed to lower layer, except
+   * the `signature`, `body`, and `result` to avoid confusion.
    *
-   * @param {object} m - invocation message
-   * @param {object} opts - options
-   * @param {string} [opts.signature] - signature for returned data
-   * @param {TYPE[]} [opts.body] - returned data
-   * @param {boolean} [opts.debug] - debug print
-   * @parma {boolean} [opts.decode] - debug
+   * This function is only used in `handleMethodCall'.
+   *
+   * @param {object} m - METHOD_CALL message
+   * @param {undefined|TYPE|object} result - unwrapped or wrapped result
+   * @param {TYPE} [wrapped.result] - wrapped result
+   * @param {boolean} [result.debug] - debug print
+   * @parma {boolean} [result.decode] - decode the encoded message again
    */
-  methodReturn (m, opts = {}) {
-    const r = {
-      debug: !!opts.debug,
-      decode: !!opts.decode,
+  formatMethodResult (m, result) {
+    const o = {
       type: 'METHOD_RETURN',
       flags: { noReply: true },
       destination: m.sender,
-      replySerial: m.serial
+      replySerial: m.serial,
+    } 
+
+    if (result === undefined) return o 
+    if (result instanceof TYPE) return Object.assign(o, {
+      signature: result.signature(),
+      body: [result]
+    })
+
+    if (typeof result === 'object') {
+      if (result.result === undefined) {
+        return Object.assign({}, result, o, {
+          signature: undefined,
+          body: undefined,
+          result: undefined
+        }) 
+      }
+
+      if (result.result instanceof TYPE) {
+        return Object.assign({}, result, o, {
+          signature: result.result.signature(),
+          body: [result.result],
+          result: undefined
+        })
+      }
     }
 
-    if (opts.signature) {
-      r.signature = opts.signature
-      r.body = opts.body
-    }
-
-    this.send(r)
+    throw ''
   }
 
   /**
@@ -498,94 +518,22 @@ class DBus extends EventEmitter {
       return
     }
 
+    // Method returns undefined, TYPE,
+    // or object { result, signature, ... }
     node.Method(m)
-      .then(o => {
-
-        console.log('o:', o)
-
-        if (o) {
-
-          console.log(o)
-
-          this.methodReturn(m, {
-            signature: o.signature(),
-            body: [o] 
-          })
-        } else {
-          this.methodReturn(m)
-        }
-/**
-      this.methodReturn(m, o && {
-        signature: o.signature(),
-        body: [o]
-      })
-*/
-      })
+      .then(result => this.send(this.formatMethodResult(m, result)))
       .catch(e => {
         console.log(e)
       })
-/**
-
-    node.Method()
-      .then(data => {
-      })
-      .catch(e) => {
-      })
-    return
-
-    const impl = node.implementations.find(i => i.interface === m.interface)
-    if (!impl) {
-      this.send({
-        type: 'ERROR',
-        flags: { noReply: true },
-        destination: m.sender,
-        errorName: 'org.freedesktop.DBus.Error.UnknownMethod',
-        replySerial: m.serial,
-        signature: 's',
-        body: [new STRING(`${m.interface} not found on this object`)]
-      })
-      return
-    }
-
-    const intf = this.interfaces.find(i => i.name)
-
-    const methods = intf.methods
-    const { args } = intf.methods.find(method => method.name === m.member)
-
-    const isig = args
-      ? args.filter(a => a.direction === 'in').map(a => a.type).join('')
-      : ''
-
-    const osig = args
-      ? args.filter(a => a.direction === 'out').map(a => a.type).join('')
-      : ''
-
-    // const impl = this.implementations.find(i => i.interface === m.interface)
-    const method = impl[m.member]
-
-    method.call(node, m)
-      .then(data => {
-        if (osig) {
-          this.methodReturn(m, { signature: osig, body: [data] })
-        } else {
-          this.methodReturn(m)
-        }
-      })
-      .catch(e => {
-        // TODO
-        console.log(e)
-      })
-
-*/
   }
 
   /**
    * Adds an interface definition
    *
-   * @param {Interface} iface 
+   * @param {Interface} iface
    */
   addInterface (iface) {
-    const ni = normalizeInterface(iface) 
+    const ni = normalizeInterface(iface)
     if (this.interfaces.find(n => n.name === ni.name)) {
       throw new Error(`interface ${iface.name} already exists`)
     }
@@ -594,23 +542,23 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * 
+   * Adds an implementation
    */
   addImplementation (implementation) {
     if (typeof implementation !== 'object' || !implementation) {
       throw new TypeError('implementation not an object')
     }
 
-    if (typeof implementation.interface !== 'string' || 
+    if (typeof implementation.interface !== 'string' ||
       !implementation.interface) {
       throw new TypeError('implementation name not a string')
-    } 
-  
-    const iface = this.interfaces.find(i => i.name === implementation.interface) 
-    if (!iface) {
-      throw new Error(`interface not found`)
     }
-    
+
+    const iface = this.interfaces.find(i => i.name === implementation.interface)
+    if (!iface) {
+      throw new Error('interface not found')
+    }
+
     validateImplementation(iface, implementation)
 
     this.implementations.push(Object.assign({}, implementation, {
@@ -619,28 +567,25 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * @param {Array<string|number>} interfaces - an array of interfaces, 
+   * @param {Array<string|number>} interfaces - an array of interfaces,
    *                                            if only used
    * default iface implementation, the object could be a string
    */
   addNode (opts) {
     const node = new Node(this, opts.path)
-    
+
     opts.implementations.forEach(impl => {
       if (typeof impl === 'string') {
-        impl = this.implementations.find(i => i.interface.name === impl) 
+        impl = this.implementations.find(i => i.interface.name === impl)
         if (!impl) {
           throw new Error('implementation not found')
         }
-        node.addImplementation(impl)
+        // !!! create a new object with impl as prototype
+        node.addImplementation(Object.create(impl))
       } else {
         node.addImplementation(impl)
       }
     })
-
-    console.log('======')
-    console.log(node)
-    console.log('======')
 
     this.nodes.push(node)
   }
@@ -653,7 +598,7 @@ class DBus extends EventEmitter {
 
   /**
    * Invokes org.freedesktop.DBus.Peer.Ping
-   * 
+   *
    * @param {string} destination
    * @param {string} [objectPath]
    * @param {function} callback - `err => {}`
@@ -673,8 +618,8 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * Invokes org.freedesktop.DBus.GetMachineId 
-   * 
+   * Invokes org.freedesktop.DBus.GetMachineId
+   *
    * @param {string} destination
    * @param {string} [objectPath] - defaults to '/'
    * @param {function} callback - `(err, machineId) => {}`, machindId is a string

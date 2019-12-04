@@ -65,16 +65,12 @@ class Node {
       .map(a => a.type)
       .join('')
 
-    console.log('Method', m.member, isig, osig)
-
     // check isig
     if (isig !== (m.signature || '')){
       throw 'something'
     }
 
     const result = await impl[m.member](m) 
-
-    console.log(result, osig)
 
     if (result) {
       if (!(result instanceof TYPE)) {

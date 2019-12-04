@@ -647,6 +647,59 @@ class DBus extends EventEmitter {
       }
     })
   }
+
+  GetProp (destination, objectPath, interfaceName, propName, callback) {
+    this.methodCall({
+      destination,
+      path: objectPath,
+      interface: 'org.freedesktop.DBus.Properties',
+      member: 'Get',
+      signature: 'ss',
+      body: [
+        new STRING(interfaceName),
+        new STRING(propName)
+      ]
+    }, callback)
+  }
+
+  GetAllProps (destination, objectPath, interfaceName, callback) {
+    this.methodCall({
+      destination,
+      path: objectPath,
+      interface: 'org.freedesktop.DBus.Properties',
+      member: 'GetAll',
+      signature: 's',
+      body: [ new STRING(interfaceName) ]
+    }, callback)
+  }
+
+  SetProp (destination, objectPath, interfaceName, propName, value, callback) {
+    this.methodCall({
+      destination,
+      path: objectPath,
+      interface: 'org.freedesktop.DBus.Properties',
+      member: 'Set',
+      signature: 'ssv',
+      body: [
+        new STRING(interfaceName),
+        new STRING(propName),
+        new VARIANT(value)
+      ] 
+    }, (err, body) => {
+      console.log(err, body)
+    })
+  }
+
+  GetManagedObjects (destination, objectPath, callback) {
+    this.methodCall({
+      destination,
+      path: objectPath,
+      interface: 'org.freedesktop.DBus.ObjectManager',
+      member: 'GetManagedObjects'
+    }, (err, body) => {
+      console.log(err, body)
+    })
+  }
 }
 
 module.exports = DBus

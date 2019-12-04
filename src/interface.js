@@ -2,23 +2,23 @@ const { split } = require('./signature')
 
 /**
  * An interface object is a JavaScript object literal DEFINING
- * a DBus interface. It is a schema, not an implementation or a base class.
+ * a DBus interface. It is a schema, not an implementation.
  *
- * This module provides a set of methods for normalizing a definition.
+ * There are two types defined: `Interface` and `NormalizedInterface`. 
+ * The former is permissive and used in dbus api. The latter is strict
+ * and used by dbus client internally.
  *
- * Each method accepts a type of object, validates its properties,
- * sets default value if the property is optional, and returns a normalized one.
- *
- * An interface object looks like:
+ * The definition has a hierarchical structure, as shown by the following 
+ * example:
  *
  * ```JavaScript
- * {
+ * {                              // Interface object
  *   name: 'string',
  *   methods: [
- *     {
+ *     {                          // a Method object
  *       name: 'string',
  *       args: [
- *         {
+ *         {                      // a MethodArg object
  *           name: 'string',      // optional
  *           type: 'string',      // DBus data type signature,
  *                                // single complete type
@@ -29,19 +29,18 @@ const { split } = require('./signature')
  *     }
  *   ],
  *   properties: [
- *     {
+ *     {                          // a Property object
  *       name: 'string',
- *       type: 'string',          // DBus data type signature,
- *                                // single complete type
+ *       type: 'string',          
  *       access: 'read',          // read, write, or readwrite
  *       optional: true
  *     }
  *   ],
  *   signals: [
- *     {
+ *     {                          // a Signal object
  *       name: 'string',
  *       args: [
- *         {
+ *         {                      // a SignalArg object
  *           name: 'string',      // optional
  *           type: 'string',      // DBus data type signature,
  *                                // single complete type
@@ -52,6 +51,19 @@ const { split } = require('./signature')
  *   ]
  * }
  * ```
+ *
+ * This module provides a set of methods to normalize each type of data
+ * and collectively normalize an interface definition, including:
+ * - normalizeMethodArg
+ * - normalizeMethod
+ * - normalizeProperty 
+ * - normalizeSignalArg
+ * - normalizeSignal
+ * - normalizeInterface
+ *
+ * Each method accepts a type of data object, validates its properties,
+ * sets default value for optional propeties, and returns a normalized 
+ * data object.
  *
  * @module
  */
@@ -363,7 +375,11 @@ const normalizeSignal = signal => {
 }
 
 /**
- * @typedef {object} Interface
+ * Interface is a DBus interface definition.
+ *
+ * This data type is permissive.
+ *
+ * @typedef {object} module:interface.Interface
  * @property {string} name - interface name, eg. org.freedesktop.DBus.Properties
  * @property {Method[]} [methods]
  * @property {Property[]} [properties]
@@ -371,7 +387,9 @@ const normalizeSignal = signal => {
  */
 
 /**
- * @typedef {object} NormalizedInterface
+ * NormalizedInterface is a DBus interface definition.
+ *
+ * @typedef {object} module:interface.NormalizedInterface
  * @property {string} name - interface name, eg. org.freedesktop.DBus.Properties
  * @property {NormalizedMethod[]} methods
  * @property {NormalizedProperty[]} properties
@@ -379,13 +397,13 @@ const normalizeSignal = signal => {
  */
 
 /**
- * Normalizes a DBus interface definition
+ * Normalizes an Interface
  *
  * @param {Interface}
  * @returns {NormalizedInterface}
  * @throws {TypeError|RangeError}
  */
-const normalize = iface => {
+const normalizeInterface = iface => {
   iface = iface || {}
 
   if (typeof iface !== 'object') {
@@ -434,7 +452,7 @@ const normalize = iface => {
   return { name, methods, properties, signals }
 }
 
-module.exports = Object.assign(normalize, {
+module.exports = Object.assign(normalizeInterface, {
   normalizeMethodArg,
   normalizeMethod,
   normalizeProperty,

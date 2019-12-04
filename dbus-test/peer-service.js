@@ -5,19 +5,18 @@ const expect = chai.expect
 
 const { STRING } = require('src/types')
 const DBus = require('src/dbus')
-const PeerIntf = require('src/interfaces/org.freedesktop.DBus.Peer.js')
+const Peer = require('src/interfaces/org.freedesktop.DBus.Peer.js')
 const PeerImpl = require('src/impls/org.freedesktop.DBus.Peer.js')
 
 describe(path.basename(__filename), () => {
   it('Ping should return nothing', done => {
-    const server = new DBus({
-      ifaces: [PeerIntf],
-      impls: [PeerImpl]
-    })
+    const server = new DBus()
+    server.addInterface(Peer)
+    server.addImplementation(PeerImpl)
 
     server.addNode({
       path: '/',
-      ifaces: ['org.freedesktop.DBus.Peer']
+      implementations: ['org.freedesktop.DBus.Peer'],
     })
 
     server.on('connect', () => {
@@ -30,29 +29,23 @@ describe(path.basename(__filename), () => {
       if (server.connected) next()
     })
 
-    const next = () => {
-      client.methodCall({
-        destination: server.myName,
-        path: '/',
-        interface: 'org.freedesktop.DBus.Peer',
-        member: 'Ping'
-      }, (err, body) => {
-        expect(err).to.equal(null)
+    const next = () => 
+      client.Ping(server.myName, (err, body) => {
+        expect(err).to.equal(null)  
         expect(body).to.equal(undefined)
         done()
       })
-    }
   })
 
   it('GetMachineId should return server.machineId', done => {
     const server = new DBus({
-      ifaces: [PeerIntf],
-      impls: [PeerImpl]
+      interfaces: [Peer],
+      implementations: [PeerImpl]
     })
 
     server.addNode({
       path: '/',
-      ifaces: ['org.freedesktop.DBus.Peer']
+      implementations: ['org.freedesktop.DBus.Peer']
     })
 
     server.on('connect', () => {

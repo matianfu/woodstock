@@ -20,6 +20,25 @@ const print = buf => {
 const ERR_UNKNOWN_OBJECT = 'org.freedesktop.DBus.Error.UnknownObject'
 
 /**
+  { le: true,
+    type: 'SIGNAL',
+    flags: { noReply: true },
+    version: 1,
+    serial: 5135,
+    path: '/fi/w1/wpa_supplicant1/Interfaces/11/BSSs/199',
+    interface: 'org.freedesktop.DBus.Properties',
+    member: 'PropertiesChanged',
+    signature: 'sa{sv}as',
+    sender: ':1.8',
+    body:
+     [ 'fi.w1.wpa_supplicant1.BSS', [ [ 'Age', [ 'u', 4 ] ] ], [] ],
+    bytesDecoded: 236 }
+ * 
+ */
+
+
+
+/**
 an example error
 { type: 'ERROR',
   flags: { noReply: true },
@@ -204,6 +223,8 @@ class DBus extends EventEmitter {
     this.on('connect', () => this.connected = true)
 
     this.connect((err, socket) => {})
+
+    this.on('signal', s => this.onSignal(s))
   }
 
   /**
@@ -279,6 +300,7 @@ class DBus extends EventEmitter {
     socket.write(`\0AUTH EXTERNAL ${hex}\r\n`)
   }
 
+  // TODO too small?
   handleData (data) {
     this.data = Buffer.concat([this.data, data])
     while (1) {
@@ -323,14 +345,6 @@ class DBus extends EventEmitter {
     this.callMap.set(serial, [m, callback])
   }
 
-  error (m) {
-    this.send(Object.assign({}, m, { type: 'ERROR' }))
-  }
-
-  signal (m) {
-    this.send(Object.assign({}, m, { type: 'SIGNAL' }))
-  }
-
   /**
    *
    * @private
@@ -369,22 +383,41 @@ class DBus extends EventEmitter {
         }
       }
     } else if (m.type === 'SIGNAL') {
-      if (m.path === '/org/freedesktop/DBus' &&
-        m.interface === 'org.freedesktop.DBus' &&
-        m.sender === 'org.freedesktop.DBus' &&
-        m.member === 'NameAcquired' &&
-        Array.isArray(m.body) &&
-        m.body[0] instanceof STRING &&
-        m.body[0].value.length) {
-        this.myName = m.body[0].value
-      } else {
-        this.emit('signal', m)
-      }
+      const s = {
+        path: m.path,
+        interface: m.interface,
+        member: m.member,
+        signature: m.signature,
+        body: m.body,
+        sender: m.sender
+      } 
+      this.emit('signal', s)
     }
   }
 
-  onSignal (m) {
-    console.log(m)
+  /**
+   * Listens on 'signal' event. Sends internal signal to dbus
+   * and dispatch dbus message to registered handlers
+   * @param {object} s - internal signal
+   */
+  onSignal (s) {
+    if (s.sender) {
+    } else {
+      const m = {
+        type: 'SIGNAL',
+        flags: { noReply: true },
+        path: s.path,
+        interface: s.interface,
+        member: s.member,
+      }
+
+      if (s.body) {
+        m.signature = s.body.map(elem => elem.signature()).join('')
+        m.body = s.body 
+      }
+
+      this.send(m)
+    }
   }
 
   /**
@@ -580,7 +613,8 @@ class DBus extends EventEmitter {
         if (!impl) {
           throw new Error('implementation not found')
         }
-        // !!! create a new object with impl as prototype
+
+        // create a new object with impl as prototype
         node.addImplementation(Object.create(impl))
       } else {
         // TODO validate
@@ -592,6 +626,8 @@ class DBus extends EventEmitter {
     })
 
     this.nodes.push(node)
+
+    // TODO emit interface added for ObjectManager
   }
 
   /**
@@ -599,6 +635,56 @@ class DBus extends EventEmitter {
    */
   removeNode (path) {
   }
+
+  /**
+   * Add a match rules.
+   *
+   * ```
+   * type='signal'
+   * sender='service you want to observer'
+   * interface='org.freedesktop.DBus.Properties'
+   * member='PropertiesChanged' 
+   * path_namespace='a high level path'
+   * ```
+   *
+   * @param {object} rule
+   * @param {string} rule.type - 'signal', 'method_call', 'method_return', 'error'
+   * @param {string} rule.sender - eg. 'fi.w1.wpa_supplicant1'
+   * @param {string} rule.interface - eg. 'org.freedesktop.DBus.Properties'
+   * @param {string} rule.member - eg. 'PropertiesChanged'
+   * @param {string} rule.path - eg. '/fi/w1/wpa_supplicant1'
+   * @param {string} rule.path_namespace - eg.'/fi/w1/wpa_supplicant1'
+   */
+  AddMatch (rule, callback) {
+
+    console.log(rule)
+
+    if (typeof rule !== 'object' || !rule) {
+      throw new TypeError('rule not an object')
+    }
+
+    const keys = [
+      'type', 'sender', 'interface', 'member', 'path', 'pathNamespace'
+    ]
+
+    const s = keys
+      .reduce((arr, key) => rule[key] 
+        ? [...arr, `${key}='${rule[key]}'`] 
+        : arr, [])
+      .join(',')
+
+    console.log(s)
+
+    this.methodCall({
+      destination: 'org.freedesktop.DBus',
+      path: '/org/freedesktop/DBus',
+      interface: 'org.freedesktop.DBus',
+      member: 'AddMatch',
+      signature: 's',
+      body: [new STRING(s)]
+    }, err => callback(err))
+  }
+  
 
   /**
    * Invokes org.freedesktop.DBus.Peer.Ping
@@ -648,6 +734,9 @@ class DBus extends EventEmitter {
     })
   }
 
+  /**
+   * org.freedesktop.DBus.Properties.Get
+   */
   GetProp (destination, objectPath, interfaceName, propName, callback) {
     this.methodCall({
       destination,
@@ -662,6 +751,9 @@ class DBus extends EventEmitter {
     }, callback)
   }
 
+  /**
+   * org.freedesktop.DBus.Properties.GetAll
+   */
   GetAllProps (destination, objectPath, interfaceName, callback) {
     this.methodCall({
       destination,
@@ -673,6 +765,9 @@ class DBus extends EventEmitter {
     }, callback)
   }
 
+  /**
+   * org.freedesktop.DBus.Properties.Set
+   */
   SetProp (destination, objectPath, interfaceName, propName, value, callback) {
     this.methodCall({
       destination,
@@ -690,6 +785,9 @@ class DBus extends EventEmitter {
     })
   }
 
+  /**
+   * org.freedesktop.DBus.ObjectManager.GetManagedObjects
+   */
   GetManagedObjects (destination, objectPath, callback) {
     this.methodCall({
       destination,
@@ -699,6 +797,12 @@ class DBus extends EventEmitter {
     }, (err, body) => {
       console.log(err, body)
     })
+  }
+
+  /**
+   * org.freedesktop.DBus.Introspectable.Introspect
+   */
+  Introspect () {
   }
 }
 

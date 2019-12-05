@@ -27,8 +27,9 @@ module.exports = {
 
     // check write only TODO
    
-    const prop = impl[pname.value]
+    const prop = impl[pname]
     if (!(prop instanceof TYPE)) {
+      throw new Error('not a TYPE object')
     }
 
     return new VARIANT(prop) 

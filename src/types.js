@@ -1020,14 +1020,15 @@ const VARIANT = DEC({ code: 'v', align: 1 })(
       logu($, this.constructor.name, `${d0}/${d0} {`)
       $more()
 
-      const e0 = new SIGNATURE()
-      offset = e0.unmarshal(buf, offset, le)
-      this.elems.push(e0)
-      this.esig = e0.value
+      const elem0 = new SIGNATURE()
+      offset = elem0.unmarshal(buf, offset, le)
+      this.elems.push(elem0)
 
-      const elem = new TYPE(this.esig)
-      offset = elem.unmarshal(buf, offset, le)
-      this.elems.push(elem)
+      const elem1 = new TYPE(elem0.value)
+      offset = elem1.unmarshal(buf, offset, le)
+      this.elems.push(elem1)
+
+      this.esigs = this.elems.map(elem => elem.signature())
 
       $less()
       logu($, '}', `@ ${offset}, ${this.elems.length} elements`)

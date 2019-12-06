@@ -4,7 +4,7 @@ const net = require('net')
 const debug = require('debug')('dbus-driver')
 
 const parseXml = require('./parse-xml')
-const { TYPE, STRING } = require('./types')
+const { TYPE, STRING, VARIANT } = require('./types')
 const { encode, decode } = require('./wire')
 const normalizeInterface = require('./interface')
 const validateImplementation = require('./implementation')
@@ -320,6 +320,7 @@ class DBus extends EventEmitter {
     const serial = this.serial++
     const wired = encode(m, serial, this.myName)
     this.socket.write(wired)
+
     if (m.debug) {
       console.log(m)
       print(wired)
@@ -372,12 +373,33 @@ class DBus extends EventEmitter {
         if (m.type === 'METHOD_RETURN') {
           callback(null, m.body)
         } else {
-          let msg = 'dbus error'
-          if (m.body && m.body[0] instanceof STRING) {
-            msg = m.body[0].value
-          }
+          // message: 
+          // { 
+          //   le: true,
+          //   type: 'ERROR',
+          //   flags: {},
+          //   version: 1,
+          //   serial: 4,
+          //   errorName: 'org.freedesktop.DBus.Error.AccessDenied',
+          //   replySerial: 4,
+          //   destination: ':1.671',
+          //   sender: ':1.670',
+          //   signature: 's',
+          //   body: [ STRING { value: 'internal error' } ],
+          //   bytesDecoded: 131 
+          // }
+          // 
+          // error: 
+          // {
+          //   message: 'internal error',
+          //   code: 'ERR_DBUS_ERROR',
+          //   name: 'org.freedesktop.DBus.Error.AccessDenied',
+          // }
+
+          const msg = (m.body && m.body[0] instanceof STRING)
+            ? m.body[0].value : 'dbus error'
           const err = new Error(msg)
-          err.code = 'EDBUS'
+          err.code = 'ERR_DBUS_ERROR'
           err.name = m.errorName
           callback(err)
         }
@@ -474,18 +496,26 @@ class DBus extends EventEmitter {
   /**
    *
    */
-  errorReturn (m, opts = {}) {
-    const e = {
+  errorReturn (m, e) {
+    const r = {
       type: 'ERROR',
-      flags: { noReply: true },
+      flags: { noRepy: true },
       destination: m.sender,
-      errorName: opts.errorName,
+
+      // e.name must be a dot separated string, otherwise 
+      // DBus daemon disconnects.
+      errorName: (typeof e.name === 'string' && 
+        e.name.includes('.') &&
+        e.name.split('.').length &&
+        e.name.split('.').every(x => x.length)) 
+          ? e.name : 'org.freedesktop.DBus.Error.Failed',
+
       replySerial: m.serial,
       signature: 's',
-      body: [new STRING(opts.msg)]
+      body: [new STRING(e.message || 'internal error')],
     }
 
-    this.send(e)
+    this.send(r)
   }
 
   /**
@@ -535,29 +565,18 @@ class DBus extends EventEmitter {
    */
   handleMethodCall (m) {
     // console.log(this.role || this.myName, 'handleMethodCall', m)
-
     const node = this.nodes.find(n => n.path === m.path)
     if (!node) {
-      // org.freedesktop.DBus.Error.UnknownObject
-      this.send({
-        type: 'ERROR',
-        flags: { noReply: true },
-        destination: m.sender,
-        errorName: 'org.freedesktop.DBus.Error.UnknownObject',
-        replySerial: m.serial,
-        signature: 's',
-        body: [new STRING('object not found')]
-      })
-      return
+      const e = new Error(`object not found`)
+      e.name = 'org.freedesktop.DBus.Error.UnknownObject'
+      this.errorReturn(m, e)
+    } else {
+      // Method returns undefined, TYPE,
+      // or object { result, signature, ... }
+      node.Method(m)
+        .then(result => this.send(this.formatMethodResult(m, result)))
+        .catch(e => this.errorReturn(m, e))
     }
-
-    // Method returns undefined, TYPE,
-    // or object { result, signature, ... }
-    node.Method(m)
-      .then(result => this.send(this.formatMethodResult(m, result)))
-      .catch(e => {
-        console.log(e)
-      })
   }
 
   /**
@@ -656,9 +675,6 @@ class DBus extends EventEmitter {
    * @param {string} rule.path_namespace - eg.'/fi/w1/wpa_supplicant1'
    */
   AddMatch (rule, callback) {
-
-    console.log(rule)
-
     if (typeof rule !== 'object' || !rule) {
       throw new TypeError('rule not an object')
     }
@@ -672,8 +688,6 @@ class DBus extends EventEmitter {
         ? [...arr, `${key}='${rule[key]}'`] 
         : arr, [])
       .join(',')
-
-    console.log(s)
 
     this.methodCall({
       destination: 'org.freedesktop.DBus',
@@ -780,9 +794,7 @@ class DBus extends EventEmitter {
         new STRING(propName),
         new VARIANT(value)
       ] 
-    }, (err, body) => {
-      console.log(err, body)
-    })
+    }, callback)
   }
 
   /**

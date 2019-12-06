@@ -3,15 +3,12 @@ const { TYPE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('../types')
 module.exports = {
   interface: 'org.freedesktop.DBus.Properties',
 
+  // This function should not be here
   getImplementation (name) {
-    const impl = this
-      .node
-      .implementations
+    const impl = this.node.implementations
       .find(impl => impl.interface.name === name)
 
-    if (!impl) {
-      throw 'interface not found'
-    }
+    if (!impl) throw new Error('interface not found')
     return impl
   },
 
@@ -20,13 +17,14 @@ module.exports = {
     const pname = m.body[1].value
 
     const impl = this.getImplementation(iname)
-
     const def = impl.interface.properties.find(p => p.name === pname)
-    if (!def) {
+
+    if (def.access === 'write') {
+      const err = new Error(`property is write-only`)
+      err.name = 'org.freedesktop.DBus.Error.AccessDenied'
+      throw err
     }
 
-    // check write only TODO
-   
     const prop = impl[pname]
     if (!(prop instanceof TYPE)) {
       throw new Error('not a TYPE object')
@@ -53,19 +51,31 @@ module.exports = {
   },
 
   async Set (m) {
-    const iname = m.body[0].value
-    const pname = m.body[1].value
-    const impl = this.getImplementation(iname)
+    const interfaceName = m.body[0].value
+    const propertyName = m.body[1].value
+    const signature = m.body[2].elems[0].value
+    // value is a TYPE object
+    const value = m.body[2].elems[1]
 
-    const def = impl.interface.properties.find(p => p.name === pname)
-    if (!def) {
+    const impl = this.getImplementation(interfaceName)
+    const def = impl.interface.properties.find(p => p.name === propertyName)
+
+    // forbid Set on read-only property
+    if (def.access === 'read') {
+      const err = new Error('property is read-only')
+      err.name = 'org.freedesktop.DBus.Error.AccessDenied'
+      throw err
     }
 
-    // read-only
-    
-    impl[propName] = value
+    if (def.type !== signature) {
+      const err = new Error('property signature mismatch')
+      err.name = 'org.freedesktop.DBus.Error.InvalidArgs'
+      throw err
+    }
 
-    this.signal(iname, { [panme]: value }, [], m)
+    impl[propertyName] = value
+
+    this.signal(interfaceName, { [propertyName]: value }, [], m)
   },
 
   /**
@@ -79,21 +89,20 @@ module.exports = {
     invalidatedProperties = [],
     origin = null
   ) {
-    const body = []
-    body.push(new STRING(interfaceName))
-    body.push(new Array(Object.keys.map(name => new DICT_ENTRY([
-      new STRING(name),
-      new VARIANT(changedProperties[name])
-    ]))))
-    body.push(new Array(invalidatdProperties.map(name => 
-      new STRING(name))))
-
     this.bus.emit('signal', {
       origin,
       path: this.node.path,
       interface: 'org.freedesktop.DBus.Properties',
       member: 'PropertiesChanged',
-      body, 
+      body: [
+        new STRING(interfaceName),
+        new ARRAY(Object.keys(changedProperties)
+          .map(name => new DICT_ENTRY([
+            new STRING(name),
+            new VARIANT(changedProperties[name])
+          ]))),
+        new ARRAY(invalidatedProperties.map(name => new STRING(name)), 'as')
+      ]
     })
   }
 }

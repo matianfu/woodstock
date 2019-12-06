@@ -3,7 +3,7 @@ const path = require('path')
 const chai = require('chai')
 const expect = chai.expect
 
-const { STRING, ARRAY, DICT_ENTRY, VARIANT } = require('src/types')
+const { BYTE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('src/types')
 const DBus = require('src/dbus')
 const Properties = require('src/interfaces/org.freedesktop.DBus.Properties')
 const PropertiesImpl = require('src/impls/org.freedesktop.DBus.Properties')
@@ -19,7 +19,9 @@ const ReadWrite = require('src/interfaces/com.example.readwrite')
  * Set Write should succeed with internal signal but no dbus signal
  * Set ReadWrite should succeed with both internal signal and dbus signal
  */
-describe(path.basename(__filename), () => {
+describe(path.basename(__filename) +
+  ', test org.freedesktop.DBus.Properties implementation' +
+  ' using custom readwrite interface', () => {
   let client, server
 
   // set up client and server
@@ -60,12 +62,12 @@ describe(path.basename(__filename), () => {
         done()
       }))
 
-  it('Get Write should fail', done =>
+  it('Get Write should fail with PropertyWriteOnly', done =>
     client.GetProp(server.myName, '/', 'com.example.readwrite', 'Write',
       (err, body) => {
         expect(err).is.an('Error')
         expect(err.code).to.equal('ERR_DBUS_ERROR')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.AccessDenied')
+        expect(err.name).to.equal('org.freedesktop.DBus.Error.PropertyWriteOnly')
         done()
       }))
 
@@ -96,17 +98,17 @@ describe(path.basename(__filename), () => {
         done()
       }))
 
-  it('Set Read should fail', done =>
+  it('Set Read should fail with PropertyReadOnly', done =>
     client.SetProp(server.myName, '/', 'com.example.readwrite', 'Read',
       new STRING('bar'),
       (err, body) => {
         expect(err).to.be.an('Error')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.AccessDenied')
+        expect(err.name).to.equal('org.freedesktop.DBus.Error.PropertyReadOnly')
         expect(err.code).to.equal('ERR_DBUS_ERROR')
         done()
       }))
 
-  it('Set Write should succeed', done =>
+  it('Set Write to "bar" should succeed', done =>
     client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
       new STRING('bar'),
       (err, body) => {
@@ -114,6 +116,17 @@ describe(path.basename(__filename), () => {
         expect(body).to.equal(undefined)
         done()
       }))
+
+  it('Set Write to BYTE should fail with InvalidSignature', done => {
+    client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
+      new BYTE(2),
+      (err, body) => {
+        expect(err).to.be.an('Error')
+        expect(err.name).to.equal('org.freedesktop.DBus.Error.InvalidSignature')
+        expect(err.code).to.equal('ERR_DBUS_ERROR')
+        done()
+      })
+  })
 
   it('Set Write should emit signal on server', done => {
     client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
@@ -125,12 +138,12 @@ describe(path.basename(__filename), () => {
       expect(s.interface).to.equal('org.freedesktop.DBus.Properties')
       expect(s.member).to.equal('PropertiesChanged')
       expect(s.body).to.deep.equal([
-        new STRING('com.example.readwrite') ,
+        new STRING('com.example.readwrite'),
         new ARRAY([
           new DICT_ENTRY([
             new STRING('Write'),
             new VARIANT(new STRING('bar'))
-          ]),
+          ])
         ]),
         new ARRAY([], 'as')
       ])
@@ -149,7 +162,7 @@ describe(path.basename(__filename), () => {
       if (err) return done(err)
 
       client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
-        new STRING('bar'), (err, body) => {}) 
+        new STRING('bar'), (err, body) => {})
 
       client.on('signal', s => {
         expect(s.sender).to.equal(server.myName)
@@ -157,12 +170,12 @@ describe(path.basename(__filename), () => {
         expect(s.interface).to.equal('org.freedesktop.DBus.Properties')
         expect(s.member).to.equal('PropertiesChanged')
         expect(s.body).to.deep.equal([
-          new STRING('com.example.readwrite') ,
+          new STRING('com.example.readwrite'),
           new ARRAY([
             new DICT_ENTRY([
               new STRING('Write'),
               new VARIANT(new STRING('bar'))
-            ]),
+            ])
           ]),
           new ARRAY([], 'as')
         ])
@@ -224,8 +237,8 @@ describe(path.basename(__filename), () => {
       member: 'PropertiesChanged',
       path_namespace: '/'
     }, err => {
-      if (err) return done(err) 
-    
+      if (err) return done(err)
+
       client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
         new STRING('bar'), (err, body) => {})
 
@@ -239,8 +252,8 @@ describe(path.basename(__filename), () => {
           new ARRAY([
             new DICT_ENTRY([
               new STRING('ReadWrite'),
-              new VARIANT(new STRING('bar')) 
-            ]),
+              new VARIANT(new STRING('bar'))
+            ])
           ]),
           new ARRAY([], 'as')
         ])

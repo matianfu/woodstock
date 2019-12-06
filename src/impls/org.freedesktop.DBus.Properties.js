@@ -21,7 +21,7 @@ module.exports = {
 
     if (def.access === 'write') {
       const err = new Error(`property is write-only`)
-      err.name = 'org.freedesktop.DBus.Error.AccessDenied'
+      err.name = 'org.freedesktop.DBus.Error.PropertyWriteOnly'
       throw err
     }
 
@@ -63,13 +63,13 @@ module.exports = {
     // forbid Set on read-only property
     if (def.access === 'read') {
       const err = new Error('property is read-only')
-      err.name = 'org.freedesktop.DBus.Error.AccessDenied'
+      err.name = 'org.freedesktop.DBus.Error.PropertyReadOnly'
       throw err
     }
 
     if (def.type !== signature) {
       const err = new Error('property signature mismatch')
-      err.name = 'org.freedesktop.DBus.Error.InvalidArgs'
+      err.name = 'org.freedesktop.DBus.Error.InvalidSignature'
       throw err
     }
 

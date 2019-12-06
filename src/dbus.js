@@ -548,7 +548,7 @@ class DBus extends EventEmitter {
         callback(null, xml)
 
         const parsed = parseXml(xml)
-        console.log(JSON.stringify(parsed, null, '  '))
+        // console.log(JSON.stringify(parsed, null, '  '))
       }
     })
   }

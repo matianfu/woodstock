@@ -3,6 +3,9 @@ const { TYPE } = require('./types')
 
 const validateImpl = require('./implementation')
 
+const PropertiesImpl = require('./impls/org.freedesktop.DBus.Properties')
+const OmImpl = require('./impls/org.freedesktop.DBus.ObjectManager')
+
 /**
  * Node represents a DBus object with object path.
  * 
@@ -35,9 +38,9 @@ class Node {
       set (nodes) {
         if (!this._nodes && nodes) {
           this._nodes = nodes
-          this.implementations.forEach(impl => impl.nodes = nodes)
+          this.implementations.forEach(impl => (impl.nodes = nodes))
         } else if (this._nodes && !nodes) {
-          this.implementations.forEach(impl => impl.nodes = undefined)
+          this.implementations.forEach(impl => (impl.nodes = undefined))
           this.nodes = undefined
         } else {
           throw new Error('nodes should be set/reset in pair')
@@ -49,13 +52,13 @@ class Node {
     this.implementations = []
     implementations.forEach(impl => {
       if (typeof impl === 'string') {
-        impl = templates.find(i => i.interface.name === impl)
-        if (!impl) {
+        const tmpl = templates.find(i => i.interface.name === impl)
+        if (!tmpl) {
           throw new Error(`interface implementation for "${impl}" not found`)
         }
 
         // create a new object with impl as prototype
-        impl = Object.create(impl)
+        impl = Object.create(tmpl)
       } else if (typeof impl === 'object' && impl) {
         const iface = interfaces.find(i => i.name === impl.interface)
         if (!iface) {
@@ -63,6 +66,7 @@ class Node {
         }
 
         validateImpl(iface, impl) 
+
         impl.interface = iface 
       } else {
         throw new TypeError('implementation not an object or a string')

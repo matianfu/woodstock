@@ -615,9 +615,7 @@ class DBus extends EventEmitter {
 
     validateImplementation(iface, implementation)
 
-    this.templates.push(Object.assign({}, implementation, {
-      interface: iface
-    }))
+    this.templates.push(Object.assign(implementation, { interface: iface }))
   }
 
   /**
@@ -808,9 +806,7 @@ class DBus extends EventEmitter {
       path: objectPath,
       interface: 'org.freedesktop.DBus.ObjectManager',
       member: 'GetManagedObjects'
-    }, (err, body) => {
-      console.log(err, body)
-    })
+    }, callback)
   }
 
   /**

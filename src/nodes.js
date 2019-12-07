@@ -19,6 +19,18 @@ class Nodes extends EventEmitter {
     this.nodes = []
   }
 
+  hasProperChild (parent, child) {
+    if (parent.path === '/') {
+      return child.path.length > 1
+    } else {
+      return child.path.startsWith(parent.path + '/')
+    }
+  }
+
+  getProperChildren (parent) {
+    return this.nodes.filter(n => this.hasProperChild(parent, n))
+  }
+
   find (path) {
     return this.nodes.find(n => n.path === path) 
   }
@@ -46,13 +58,12 @@ class Nodes extends EventEmitter {
 
     node.path = objectPath
     this.nodes.push(node)
-
     this.nodes.sort((a, b) => {
       if (a.path < b.path) return -1
       if (a.path > b.path) return 1
       return 0
     })
-
+    node.nodes = this    
     this.emit('added', node)
   }
 

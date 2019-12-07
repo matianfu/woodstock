@@ -1,3 +1,4 @@
+const { STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types') 
 
 /**
  * > Quote from DBus Specification:
@@ -16,6 +17,11 @@ const om = {
   interface: 'org.freedesktop.DBus.ObjectManager',
 
   GetManagedObjects () {
+    const children = this.nodes.getProperChildren(this.node)
+
+    console.log(children.map(c => c.path))
+
+//    console.dir(this)
 /**
     const result = new ARRAY('signature')
 
@@ -37,6 +43,7 @@ const om = {
   nodeAdded (node) {
     if (this.nodes.hasProperChild(this.node, node)) {
     // TODO signal
+      console.log('child added')
     }
   },
 
@@ -44,28 +51,27 @@ const om = {
     if (this.nodes.hasProperChild(this.node, node)) {
     // TODO signal
     }
-  }
-}
+  },
 
-Object.defineProperty(om, 'nodes', {
-  get () {
+  get nodes () {
     return this._nodes
   },
-  set (nodes) {
-    if (!this._nodes && nodes) {
-      this._nodes = nodes
+
+  set nodes (value) {
+    if (!this._nodes && value) {
+      this._nodes = value
       this.onNodeAdded = this.nodeAdded.bind(this)
       this.onNodeRemoved = this.nodeRemoved.bind(this)
-      this.nodes.on('added', this.onNodeAdded)
-      this.nodes.on('removed', this.onNodeRemoved)
-    } else if (this._nodes && !nodes) {
-      this.nodes.removeListener('added', this.onNodeAdded)
-      this.nodes.removeListener('removed', this.onNodeRemoved)
-      this.nodes = undefined
+      this._nodes.on('added', this.onNodeAdded)
+      this._nodes.on('removed', this.onNodeRemoved)
+    } else if (this._nodes && !value) {
+      this._nodes.removeListener('added', this.onNodeAdded)
+      this._nodes.removeListener('removed', this.onNodeRemoved)
+      this._nodes = undefined
     } else {
       throw new Error('nodes should be set/reset in pair')
     }
   }
-})
+}
 
 module.exports = om

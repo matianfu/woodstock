@@ -7,11 +7,6 @@ module.exports = {
       access: 'read',
     },
     {
-      name: 'Write',
-      type: 's',
-      access: 'write',
-    },
-    {
       name: 'ReadWrite',
       type: 's',
       access: 'readwrite'

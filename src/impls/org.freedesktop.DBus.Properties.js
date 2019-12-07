@@ -5,24 +5,26 @@ module.exports = {
 
   // This function should not be here
   getImplementation (name) {
-    const impl = this.node.implementations
-      .find(impl => impl.interface.name === name)
+    const impl = this.node.implementations.find(impl => impl.interface.name === name)
+    if (!impl) {
+      const e = new Error('unknown interface')
+      e.name = 'org.freedesktop.DBus.Error.UnknownInterface' 
+      throw e
+    }
 
-    if (!impl) throw new Error('interface not found')
     return impl
   },
 
-  async Get (m) {
+  Get (m) {
     const iname = m.body[0].value
     const pname = m.body[1].value
 
     const impl = this.getImplementation(iname)
     const def = impl.interface.properties.find(p => p.name === pname)
-
-    if (def.access === 'write') {
-      const err = new Error(`property is write-only`)
-      err.name = 'org.freedesktop.DBus.Error.PropertyWriteOnly'
-      throw err
+    if (!def) {
+      const e = new Error('property not found')
+      e.name = 'org.freedesktop.DBus.Error.UnknownProperty'
+      throw e
     }
 
     const prop = impl[pname]
@@ -33,14 +35,13 @@ module.exports = {
     return new VARIANT(prop) 
   },
 
-  async GetAll (m) {
+  GetAll (m) {
     const iname = m.body[0].value
     const impl = this.getImplementation(iname)
    
     const arr = impl
       .interface
       .properties
-      .filter(prop => prop.access === 'read' || prop.access === 'readwrite')
       .filter(prop => impl[prop.name] instanceof TYPE)
       .map(prop => new DICT_ENTRY([
         new STRING(prop.name),
@@ -50,15 +51,21 @@ module.exports = {
     return new ARRAY(arr)
   },
 
-  async Set (m) {
+  Set (m) {
     const interfaceName = m.body[0].value
     const propertyName = m.body[1].value
     const signature = m.body[2].elems[0].value
+
     // value is a TYPE object
     const value = m.body[2].elems[1]
 
     const impl = this.getImplementation(interfaceName)
     const def = impl.interface.properties.find(p => p.name === propertyName)
+    if (!def) {
+      const e = new Error('property not found')
+      e.name = 'org.freedesktop.DBus.Error.UnknownProperty'
+      throw e
+    }
 
     // forbid Set on read-only property
     if (def.access === 'read') {

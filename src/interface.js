@@ -32,7 +32,7 @@ const { split } = require('./signature')
  *     {                          // a Property object
  *       name: 'string',
  *       type: 'string',          
- *       access: 'read',          // read, write, or readwrite
+ *       access: 'read',          // read or readwrite (write not supported)
  *       optional: true
  *     }
  *   ],
@@ -192,7 +192,7 @@ const normalizeMethod = method => {
  * @typedef {object} Property
  * @property {string} name        - property name
  * @property {string} type        - DBus data type signature, single complete type
- * @property {string} access      - "read", "write", or "readwrite"
+ * @property {string} access      - "read" or "readwrite"
  * @property {boolean} [optional] - if true, the implementation may not have this
  *                                  member
  */
@@ -201,7 +201,7 @@ const normalizeMethod = method => {
  * @typedef {object} NormalizedProperty
  * @property {string} name        - property name
  * @property {string} type        - DBus data type signature, single complete type
- * @property {string} access      - "read", "write", or "readwrite"
+ * @property {string} access      - "read" or "readwrite"
  * @property {boolean} optional   - if true, the implementation may not have this
  *                                  member
  */
@@ -256,8 +256,7 @@ const normalizeProperty = prop => {
     throw new TypeError('property access not a string')
   }
 
-  if (access !== 'read' && access !== 'write' && access !== 'readwrite') {
-    console.log('000000000000', prop)
+  if (access !== 'read' && access !== 'readwrite') {
     throw new RangeError('invalid property access')
   }
 

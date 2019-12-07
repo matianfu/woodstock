@@ -64,24 +64,23 @@ class Node {
    */
   async Method (m) {
     const impl = this.implementations.find(i => i.interface.name === m.interface)
-
     if (!impl) {
       throw 'TODO something'
     }
 
-    const method = impl.interface.methods
-      .find(method => method.name === m.member)
-
-    if (!method) {
-      throw 'anything'
+    const def = impl.interface.methods.find(def => def.name === m.member)
+    if (!def) {
+      const e = new Error('unknown method')
+      e.name = 'org.freedesktop.DBus.Error.UnknownMethod'
+      throw e
     }
 
-    const isig = method.args
+    const isig = def.args
       .filter(a => a.direction === 'in')
       .map(a => a.type)
       .join('')
 
-    const osig = method.args
+    const osig = def.args
       .filter(a => a.direction === 'out')
       .map(a => a.type)
       .join('')
@@ -91,7 +90,18 @@ class Node {
       throw 'something'
     }
 
-    const result = await impl[m.member](m) 
+    const method = impl[m.member] 
+    if (typeof method !== 'function') {
+      // TODO method may be optional
+      throw new Error('method not a function')
+    }
+
+    let result
+    if (method.constructor.name === 'AsyncFunction') {
+      result = await method.call(impl, m) 
+    } else {
+      result = method.call(impl, m)
+    }
 
     if (result) {
       if (!(result instanceof TYPE)) {

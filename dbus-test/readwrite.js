@@ -10,14 +10,7 @@ const PropertiesImpl = require('src/impls/org.freedesktop.DBus.Properties')
 const ReadWrite = require('src/interfaces/com.example.readwrite')
 
 /**
- * There are three props on readwrite interface
- * Get Read should succeed
- * Get Write should fail
- * Get ReadWrite should succeed
- * GetAll should have Read and ReadWrite but no Write
- * Set Read should fail
- * Set Write should succeed with internal signal but no dbus signal
- * Set ReadWrite should succeed with both internal signal and dbus signal
+ * There are two props on readwrite interface, Read and ReadWrite
  */
 describe(path.basename(__filename) +
   ', test org.freedesktop.DBus.Properties implementation' +
@@ -38,7 +31,6 @@ describe(path.basename(__filename) +
         {
           interface: 'com.example.readwrite',
           Read: new STRING('hello'),
-          Write: new STRING('world'),
           ReadWrite: new STRING('foo')
         }
       ]
@@ -62,12 +54,12 @@ describe(path.basename(__filename) +
         done()
       }))
 
-  it('Get Write should fail with PropertyWriteOnly', done =>
+  it('Get Write should fail with UnknownProperty', done =>
     client.GetProp(server.myName, '/', 'com.example.readwrite', 'Write',
       (err, body) => {
         expect(err).is.an('Error')
         expect(err.code).to.equal('ERR_DBUS_ERROR')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.PropertyWriteOnly')
+        expect(err.name).to.equal('org.freedesktop.DBus.Error.UnknownProperty')
         done()
       }))
 
@@ -108,17 +100,18 @@ describe(path.basename(__filename) +
         done()
       }))
 
-  it('Set Write to "bar" should succeed', done =>
+  it('Set Write to "bar" should failed with UnknownProperty', done =>
     client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
       new STRING('bar'),
       (err, body) => {
-        expect(err).to.equal(null)
-        expect(body).to.equal(undefined)
+        expect(err).to.be.an('Error')
+        expect(err.name).to.equal('org.freedesktop.DBus.Error.UnknownProperty')
+        expect(err.code).to.equal('ERR_DBUS_ERROR')
         done()
       }))
 
-  it('Set Write to BYTE should fail with InvalidSignature', done => {
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
+  it('Set ReadWrite to BYTE should fail with InvalidSignature', done => {
+    client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
       new BYTE(2),
       (err, body) => {
         expect(err).to.be.an('Error')
@@ -126,62 +119,6 @@ describe(path.basename(__filename) +
         expect(err.code).to.equal('ERR_DBUS_ERROR')
         done()
       })
-  })
-
-  it('Set Write should emit signal on server', done => {
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
-      new STRING('bar'), (err, body) => {})
-
-    server.on('signal', s => {
-      expect(s.origin.sender).to.equal(client.myName)
-      expect(s.path).to.equal('/')
-      expect(s.interface).to.equal('org.freedesktop.DBus.Properties')
-      expect(s.member).to.equal('PropertiesChanged')
-      expect(s.body).to.deep.equal([
-        new STRING('com.example.readwrite'),
-        new ARRAY([
-          new DICT_ENTRY([
-            new STRING('Write'),
-            new VARIANT(new STRING('bar'))
-          ])
-        ]),
-        new ARRAY([], 'as')
-      ])
-      done()
-    })
-  })
-
-  it('Set Write should receive signal on client', done => {
-    client.AddMatch({
-      type: 'signal',
-      sender: server.myName,
-      interface: 'org.freedesktop.DBus.Properties',
-      member: 'PropertiesChanged',
-      path_namespace: '/'
-    }, err => {
-      if (err) return done(err)
-
-      client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
-        new STRING('bar'), (err, body) => {})
-
-      client.on('signal', s => {
-        expect(s.sender).to.equal(server.myName)
-        expect(s.path).to.equal('/')
-        expect(s.interface).to.equal('org.freedesktop.DBus.Properties')
-        expect(s.member).to.equal('PropertiesChanged')
-        expect(s.body).to.deep.equal([
-          new STRING('com.example.readwrite'),
-          new ARRAY([
-            new DICT_ENTRY([
-              new STRING('Write'),
-              new VARIANT(new STRING('bar'))
-            ])
-          ]),
-          new ARRAY([], 'as')
-        ])
-        done()
-      })
-    })
   })
 
   it('Set ReadWrite to "bar" should succeed', done =>

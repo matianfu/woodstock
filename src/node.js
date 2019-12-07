@@ -1,5 +1,7 @@
+const path = require('path')
 const { TYPE } = require('./types')
 
+const validateImpl = require('./implementation')
 
 /**
  * Node represents a DBus object with object path.
@@ -13,28 +15,65 @@ const { TYPE } = require('./types')
  */
 class Node {
   /**
-   * Constructs a Node object with given bus and path
+   * Constructs a Node object with given implemenations.
    *
-   * @param {object} bus - reference to dbus client
-   * @param {string} path - object path
+   * @param {object[]} implementations
+   * @param {object[]} interfaces - interface definitions
+   * @param {object[]} [templates] - implementation templates
    */
-  constructor (bus, path) {
-    /** reference to dbus cleint */
-    this.bus = bus
-    /** object path */
-    this.path = path
-    /** collection of interface implementation */
-    this.implementations = []
-  } 
+  constructor (implementations, interfaces, templates = []) {
+    if (!Array.isArray(implementations)) {
+      throw new TypeError('implementations not an array')
+    }
 
-  /**
-   * Adds an implementation
-   *  
-   */
-  addImplementation (impl) {
-    impl.node = this 
-    impl.bus = this.bus
-    this.implementations.push(impl)
+    /** reference to nodes, set by nodes */
+    this._nodes = undefined
+    Object.defineProperty(this, 'nodes', {
+      get () {
+        return this._nodes
+      },
+      set (nodes) {
+        if (!this._nodes && nodes) {
+          this._nodes = nodes
+          this.implementations.forEach(impl => impl.nodes = nodes)
+        } else if (this._nodes && !nodes) {
+          this.implementations.forEach(impl => impl.nodes = undefined)
+          this.nodes = undefined
+        } else {
+          throw new Error('nodes should be set/reset in pair')
+        }
+      }
+    })
+
+    /** interface implementations */
+    this.implementations = []
+    implementations.forEach(impl => {
+      if (typeof impl === 'string') {
+        impl = templates.find(i => i.interface.name === impl)
+        if (!impl) {
+          throw new Error(`interface implementation for "${impl}" not found`)
+        }
+
+        // create a new object with impl as prototype
+        impl = Object.create(impl)
+      } else if (typeof impl === 'object' && impl) {
+        const iface = interfaces.find(i => i.name === impl.interface)
+        if (!iface) {
+          throw new Error(`interface definition for "${impl.interface}" not found`)
+        }
+
+        validateImpl(iface, impl) 
+        impl.interface = iface 
+      } else {
+        throw new TypeError('implementation not an object or a string')
+      }
+
+      impl.node = this 
+      this.implementations.push(impl)
+    })
+
+    /** emit function */
+    this.emit = null
   }
 
   /**
@@ -114,6 +153,10 @@ class Node {
 
       return result
     }
+  }
+
+  signal (m) {
+    this.emit && this.emit(m)
   }
 }
 

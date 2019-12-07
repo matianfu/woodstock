@@ -1,3 +1,4 @@
+const path = require('path')
 const EventEmitter = require('events')
 const net = require('net')
 
@@ -9,6 +10,7 @@ const { encode, decode } = require('./wire')
 const normalizeInterface = require('./interface')
 const validateImplementation = require('./implementation')
 const Node = require('./node')
+const Nodes = require('./nodes')
 
 const print = buf => {
   while (buf.length) {
@@ -130,7 +132,7 @@ an example error
  * It is possible to have single DBus instance in an application.
  * But creating multiple instances for each components is more robust.
  *
- * @emits {object} m - emit DBus SIGNAL message
+ * @emits {object} m - emit signals, including internal and dbus
  */
 class DBus extends EventEmitter {
   /**
@@ -164,7 +166,7 @@ class DBus extends EventEmitter {
     /**
      *
      */
-    this.implementations = []
+    this.templates = []
     if (opts.implementations) {
       if (!Array.isArray(opts.implementations)) {
         throw new TypeError('implementations not an array')
@@ -175,7 +177,7 @@ class DBus extends EventEmitter {
     /**
      *
      */
-    this.nodes = []
+    this.nodes = new Nodes()
 
     /**
      * Maps outgoing serial to [m, callback]
@@ -565,7 +567,7 @@ class DBus extends EventEmitter {
    */
   handleMethodCall (m) {
     // console.log(this.role || this.myName, 'handleMethodCall', m)
-    const node = this.nodes.find(n => n.path === m.path)
+    const node = this.nodes.find(m.path)
     if (!node) {
       const e = new Error(`object not found`)
       e.name = 'org.freedesktop.DBus.Error.UnknownObject'
@@ -594,7 +596,7 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * Adds an implementation
+   * Adds an implementation TODO rename to addTemplate
    */
   addImplementation (implementation) {
     if (typeof implementation !== 'object' || !implementation) {
@@ -613,46 +615,46 @@ class DBus extends EventEmitter {
 
     validateImplementation(iface, implementation)
 
-    this.implementations.push(Object.assign({}, implementation, {
+    this.templates.push(Object.assign({}, implementation, {
       interface: iface
     }))
   }
 
   /**
-   * @param {Array<string|number>} interfaces - an array of interfaces,
-   *                                            if only used
-   * default iface implementation, the object could be a string
+   * Creates a DBus object
+   *
+   * If the implementation is a string, it is an interface name.
+   * If the implementation is an object. 
+   * ```
+   * {
+   *   interface: 'interface name', // replace by a reference to interface
+   *   [methods],
+   *   [properties],
+   *   [signals]
+   * }
+   * ```
+   * 
+   * 
+   * @param {object} opts 
+   * @param {string} opts.path - object path
+   * @param {Array<string|object>} - an array of implementations
    */
-  addNode (opts) {
-    const node = new Node(this, opts.path)
-
-    opts.implementations.forEach(impl => {
-      if (typeof impl === 'string') {
-        impl = this.implementations.find(i => i.interface.name === impl)
-        if (!impl) {
-          throw new Error('implementation not found')
-        }
-
-        // create a new object with impl as prototype
-        node.addImplementation(Object.create(impl))
-      } else {
-        // TODO validate
-        const iface = this.interfaces.find(iface => iface.name === impl.interface)
-        if (!iface) throw new Error('bad interface')
-        impl.interface = iface 
-        node.addImplementation(impl)
-      }
-    })
-
-    this.nodes.push(node)
-
-    // TODO emit interface added for ObjectManager
+  addNode ({ path, implementations }) {
+    const node = new Node(implementations, this.interfaces, this.templates)
+    this.nodes.add(path, node)
+    node.emit = m => this.emit('signal', m)
   }
 
   /**
-   *
+   * @param {string} path - object path
+   * @throws Error if object not found
    */
   removeNode (path) {
+    const index = this.nodes.findIndex(n => n.path === path)
+    if (index === -1) throw new Error('object path not found')
+    const [node] = this.nodes.splice(index, 1)
+
+    this.emit('nodeRemoved', node)
   }
 
   /**

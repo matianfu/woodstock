@@ -96,7 +96,7 @@ module.exports = {
     invalidatedProperties = [],
     origin = null
   ) {
-    this.bus.emit('signal', {
+    this.node.signal({
       origin,
       path: this.node.path,
       interface: 'org.freedesktop.DBus.Properties',

@@ -1,59 +1,70 @@
 
+/**
+ * > Quote from DBus Specification:
+ * >
+ * > All returned object paths are children of the object path
+ * > implementing this interface, i.e. their object paths start
+ * > with the ObjectManager's object path plus '/'.
+ */
 
 // org.freedesktop.DBus.ObjectManager.GetManagedObjects (
-//   out 
-//   DICT<OBJPATH,DICT<STRING,DICT<STRING,VARIANT>>> 
+//   out
+//   DICT<OBJPATH,DICT<STRING,DICT<STRING,VARIANT>>>
 //   objpath_interfaces_and_properties);
+
 const om = {
   interface: 'org.freedesktop.DBus.ObjectManager',
 
-  isProperChild (node) {
-    return node.path.startsWtih(this.node.path + '/')
-  }
-
-  // returns all properties on all interfaces or all subtree nodes,
-  // including this node
   GetManagedObjects () {
+/**
     const result = new ARRAY('signature')
+
     this.bus.nodes.forEach(node => {
       // not a child
-      if (!this.isProperChild(node)) return
+      if (!this.isChild(node)) return
 
-      const propImpl = node.implementations.find(i => 
-        i.interface.name === 'org.freedesktop.DBus.Properties')  
+      const propImpl = node.implementations.find(i =>
+        i.interface.name === 'org.freedesktop.DBus.Properties')
       if (!propImpl) return
 
       const impls = node.implementations.filter(impl => {
         if (impl.interface.properties.length === 0) return false
-         
       })
     })
+*/
   },
 
   nodeAdded (node) {
+    if (this.nodes.hasProperChild(this.node, node)) {
+    // TODO signal
+    }
   },
 
   nodeRemoved (node) {
-  },
-
-  onNodeAdded: this.nodeAdded.bind(this),
-  onNodeRemoved: this.nodeAdded.bind(this)
+    if (this.nodes.hasProperChild(this.node, node)) {
+    // TODO signal
+    }
+  }
 }
 
-Object.defineProperty(om, 'bus', {
+Object.defineProperty(om, 'nodes', {
   get () {
-    return this._bus
+    return this._nodes
   },
-  set (bus) {
-    if (this._bus) {
-      this._bus.removeListeners('nodeAdded', this.onNodeAdded)      
-      tihs._bus.removeListeners('nodeRemoved', this.nodeRemoved)
+  set (nodes) {
+    if (!this._nodes && nodes) {
+      this._nodes = nodes
+      this.onNodeAdded = this.nodeAdded.bind(this)
+      this.onNodeRemoved = this.nodeRemoved.bind(this)
+      this.nodes.on('added', this.onNodeAdded)
+      this.nodes.on('removed', this.onNodeRemoved)
+    } else if (this._nodes && !nodes) {
+      this.nodes.removeListener('added', this.onNodeAdded)
+      this.nodes.removeListener('removed', this.onNodeRemoved)
+      this.nodes = undefined
+    } else {
+      throw new Error('nodes should be set/reset in pair')
     }
-
-    this._bus = bus
-
-    bus.on('nodeAdded', this.onNodeAdded)
-    bus.on('nodeRemoved', this.onNodeRemoved)
   }
 })
 

@@ -1,4 +1,4 @@
-const { STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types') 
+const { TYPE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types') 
 
 /**
  * > Quote from DBus Specification:
@@ -16,35 +16,85 @@ const { STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types')
 const om = {
   interface: 'org.freedesktop.DBus.ObjectManager',
 
+  /** 
+   * type="a{oa{sa{sv}}}" 
+   */
   GetManagedObjects () {
     const children = this.nodes.getProperChildren(this.node)
 
-    console.log(children.map(c => c.path))
+    const nodes = []
+    children.forEach(node => {
+      const ifaces = []
+      node.implementations.forEach(impl => {
+        // a{sv}
+        const ifaceName = impl.interface.name
+        const props = []
+        impl.interface.properties.forEach(p => {
+          const prop = impl[p.name]
+          // validate JavaScript type and DBus type signature
+          if (prop instanceof TYPE && prop.signature() === p.type) {
+            props.push(new DICT_ENTRY([
+              new STRING(p.name),
+              new VARIANT(prop)
+            ]))
+          }
+        })
 
-//    console.dir(this)
-/**
-    const result = new ARRAY('signature')
-
-    this.bus.nodes.forEach(node => {
-      // not a child
-      if (!this.isChild(node)) return
-
-      const propImpl = node.implementations.find(i =>
-        i.interface.name === 'org.freedesktop.DBus.Properties')
-      if (!propImpl) return
-
-      const impls = node.implementations.filter(impl => {
-        if (impl.interface.properties.length === 0) return false
+        if (props.length) {
+          ifaces.push(new DICT_ENTRY([
+            new STRING(ifaceName),
+            new ARRAY(props) 
+          ]))
+        }
       })
+
+      if (ifaces.length) {
+        nodes.push(new DICT_ENTRY([
+          new OBJECT_PATH(node.path),
+          new ARRAY(ifaces) 
+        ]))
+      }
     })
-*/
+
+    return new ARRAY(nodes, 'a{oa{sa{sv}}}')
   },
 
+  /**
+   * org.freedesktop.DBus.ObjectManager.InterfacesAdded (
+   *   OBJPATH object_path,
+   *   DICT<STRING,DICT<STRING,VARIANT>> interfaces_and_properties);
+   */
   nodeAdded (node) {
-    if (this.nodes.hasProperChild(this.node, node)) {
-    // TODO signal
-      console.log('child added')
-    }
+    if (!this.nodes.hasProperChild(this.node, node)) return
+
+      console.log('child added', node.path)
+
+      const ifaces = []
+      node.implementations.forEach(impl => {
+        const ifaceName = impl.interface.name  
+        const props = []
+        impl.interface.properties.forEach(p => {
+          const prop = impl[p.name]
+          if (prop instanceof TYPE && prop.signature() === p.type) {
+            props.push(new DICT_ENTRY([
+              new STRING(p.name),
+              new VARIANT(prop)
+            ]))
+          }
+        })
+
+        ifaces.push(new DICT_ENTRY([new STRING(ifaceName), new ARRAY(props, 'a{sv}')]))
+      })
+
+      const ifacesAndProps = new ARRAY(ifaces, 'a{sa{sv}}')
+
+      this.node.signal({
+        origin: null,
+        path: this.node.path,
+        interface: 'org.freedesktop.DBus.ObjectManager',
+        member: 'InterfacesAdded',
+        body: [new OBJECT_PATH(node.path), ifacesAndProps]
+      })
   },
 
   nodeRemoved (node) {

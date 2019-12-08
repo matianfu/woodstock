@@ -152,6 +152,8 @@ class Node {
       }
 
       if (result.signature() !== osig) {
+        console.log(result.signature())
+        console.log(osig)
         throw 'bad sig'
       }
 

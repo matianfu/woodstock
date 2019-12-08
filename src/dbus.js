@@ -615,7 +615,17 @@ class DBus extends EventEmitter {
 
     validateImplementation(iface, implementation)
 
-    this.templates.push(Object.assign(implementation, { interface: iface }))
+    // workaround for non-string interface TODO
+    const tmpl = Object.create(implementation)
+    tmpl.interface = iface
+
+/**
+    this.templates.push(Object.assign(Object.create(implementation), { 
+      interface: iface 
+    }))
+*/
+
+    this.templates.push(tmpl)
   }
 
   /**

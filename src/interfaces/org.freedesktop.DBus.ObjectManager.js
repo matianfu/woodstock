@@ -21,7 +21,7 @@ module.exports = {
       args: [
         {
           name: 'objpath_interfaces_and_properties',
-          type: 'a{oa{sv}}',
+          type: 'a{oa{sa{sv}}}',
           direction: 'out'  
         }
       ]

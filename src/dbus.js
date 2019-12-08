@@ -38,8 +38,6 @@ const ERR_UNKNOWN_OBJECT = 'org.freedesktop.DBus.Error.UnknownObject'
  * 
  */
 
-
-
 /**
 an example error
 { type: 'ERROR',
@@ -618,13 +616,6 @@ class DBus extends EventEmitter {
     // workaround for non-string interface TODO
     const tmpl = Object.create(implementation)
     tmpl.interface = iface
-
-/**
-    this.templates.push(Object.assign(Object.create(implementation), { 
-      interface: iface 
-    }))
-*/
-
     this.templates.push(tmpl)
   }
 

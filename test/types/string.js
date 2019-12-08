@@ -9,7 +9,7 @@ const {
 } = require('src/types')
 
 describe(path.basename(__filename), () => {
-  it.only('construct STRING with undefined is ALLOWED is problematic !!!', done => {
+  it('construct STRING with undefined is ALLOWED is problematic !!!', done => {
     const x = new STRING()
     done()
   })

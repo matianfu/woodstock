@@ -83,6 +83,9 @@ describe(path.basename(__filename) +
           ])
         ])  
       ])
+
+      console.log(s.body[1].eval())
+
       done()
     })
     server.addNode({

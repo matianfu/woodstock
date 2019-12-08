@@ -8,7 +8,7 @@ const BLE = require('src/ble')
 const { CONTAINER_TYPE } = require('src/types')
 
 describe(path.basename(__filename), () => {
-  it('introspect root', done => {
+  it.skip('introspect root', done => {
     const dbus = new DBus()
     dbus.on('connect', () => {
       dbus.introspect('org.bluez', (err, body) => {
@@ -18,7 +18,7 @@ describe(path.basename(__filename), () => {
     })
   })
 
-  it('om get everything', done => {
+  it.skip('om get everything', done => {
     const dbus = new DBus()
     dbus.on('connect', () => {
       dbus.methodCall({

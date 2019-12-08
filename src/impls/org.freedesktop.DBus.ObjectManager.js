@@ -66,9 +66,6 @@ const om = {
    */
   nodeAdded (node) {
     if (!this.nodes.hasProperChild(this.node, node)) return
-
-      console.log('child added', node.path)
-
       const ifaces = []
       node.implementations.forEach(impl => {
         const ifaceName = impl.interface.name  

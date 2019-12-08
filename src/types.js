@@ -607,6 +607,11 @@ const STRING = DEC({ code: 's', align: 4 })(
     }
   })
 
+STRING.from = value => {
+  if (typeof value !== 'string') throw new TypeError('value not a string')
+  return new STRING(value)
+}
+
 const OBJECT_PATH = DEC({ code: 'o', align: 4 })(
   class OBJECT_PATH extends STRING {
     constructor (value) {

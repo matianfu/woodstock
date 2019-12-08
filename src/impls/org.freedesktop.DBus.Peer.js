@@ -8,12 +8,12 @@ const { STRING } = require('../types')
 const impl = {
   'interface': 'org.freedesktop.DBus.Peer',
   
-  async Ping (m) {
+  Ping (m) {
     return
   },
 
-  async GetMachineId (m) {
-    return new STRING(this.bus.machineId)
+  GetMachineId (m) {
+    return STRING.from(this.node.machineId)
   }
 }
 

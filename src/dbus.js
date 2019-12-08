@@ -574,8 +574,14 @@ class DBus extends EventEmitter {
       // Method returns undefined, TYPE,
       // or object { result, signature, ... }
       node.Method(m)
-        .then(result => this.send(this.formatMethodResult(m, result)))
-        .catch(e => this.errorReturn(m, e))
+        .then(result => {
+          // TODO debug console.log('method call result', result)
+          this.send(this.formatMethodResult(m, result))
+        })
+        .catch(e => {
+          // TODO debug console.log('method call error', e)
+          this.errorReturn(m, e)
+        })
     }
   }
 
@@ -641,6 +647,9 @@ class DBus extends EventEmitter {
   addNode ({ path, implementations }) {
     const node = new Node(implementations, this.interfaces, this.templates)
     this.nodes.add(path, node)
+    Object.defineProperty(node, 'machineId', { 
+      get: () => this.machineId 
+    })
     node.emit = m => this.emit('signal', m)
   }
 

@@ -196,7 +196,8 @@ const headerField = (key, value) => {
       throw new RangeError('invalid key value')
   }
 
-  return new STRUCT([new BYTE(key), new VARIANT(value)], '(yv)')
+  // return new STRUCT([new BYTE(key), new VARIANT(value)], '(yv)')
+  return new STRUCT('(yv)', [new BYTE(key), new VARIANT(value)])
 }
 
 /**

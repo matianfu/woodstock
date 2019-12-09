@@ -838,6 +838,7 @@ class CONTAINER extends TYPE {
    */
   constructor (...args) {
     super()
+    if (args[0] === undefined) return
     /**
      * signature string
      * @type {string}
@@ -922,35 +923,35 @@ class ARRAY extends CONTAINER {
    * TODO
    */
   constructor (signature, elements) {
-/**
-    if (Array.isArray(signature) && typeof elements === 'string') {
-      const $ = signature
-      signature = elements
-      elements = $
-    } else if (Array.isArray(signature) && signature.length) {
-      const $ = signature
-      signature = 'a' + signature[0].signature()
-      elements = $
-    }
-*/
+    super()
 
-    if (elements === undefined &&
-      Array.isArray(signature) && 
-      signature.length &&
-      signature.every(elem => elem instanceof TYPE) &&
-      signature.every(elem => elem.signature() === signature[0].signature())) {
-    
-      elements = signature
+    if (Array.isArray(signature)) {
+      elements = signature 
+      if (!elements.length) {
+        throw new Error('signature required')
+      }
+
+      if (!elements.every(el => el instanceof TYPE && 
+        el.signature() === elements[0].signature())) {
+        throw new Error('signature required')
+      }
+
       signature = 'a' + elements[0].signature()
     }
-       
-    super(signature)
 
-    elements = elements || []
+    if (signature[0] !== 'a') {
+      throw new Error('not an ARRAY signature')
+    }
+  
+    this.sig = signature
+    this.esig = this.sig.slice(1) // TODO single complete type
+    this.elems = []
 
-    this.constructByElements(elements, signature)
+    if (Array.isArray(elements)) {
+      elements.forEach(el => this.push(el))
+    }
   }
-
+/**
   constructBySignature (sig) {
     if (sig[0] !== 'a') {
       throw new Error('not an ARRAY signature')
@@ -975,15 +976,7 @@ class ARRAY extends CONTAINER {
       this.sig = 'a' + esig
     }
   }
-
-/**
-  constructByValues (sig, vals) {
-    this.sig = sig
-    this.esig = sig.slice(1)
-    this.elems = vals.map(v => new TYPE(this.esig, v))
-  }
 */
-
   eval () {
     if (this.esig[0] === '{') {
       const obj = { type: 'dict' }
@@ -1061,28 +1054,53 @@ class ARRAY extends CONTAINER {
   }
 }
 
-// no container header, accept list of single complete types
+/**
+ * STRUCT
+ */
 class STRUCT extends CONTAINER {
-  constructBySignature (sig) {
-    if (!/^\(.+\)$/.test(sig)) throw new Error('invalid STRUCT signature')
-    this.esigs = split(sig.slice(1, sig.length - 1))
-    this.sig = sig
-    this.elems = []
-  }
+  /**
+   * if signature not provided, elements must be non-empty and all elements
+   * must be TYPE object
+   *
+   * @param {string} signature
+   * @param {Array} elements
+   */
+  constructor (signature, elements) {
+    super()
 
-  constructByElements (elems, sig) {
-    if (sig) {
-      this.constructBySignature(sig)
-      elems.forEach(e => this.push(e))
-    } else {
-      this.elems = elems
-      this.esigs = this.elems.map(e => e.signature())
-      this.sig = '(' + this.esigs.join('') + ')'
+    if (Array.isArray(signature)) {
+      elements = signature
+      if (!elements.length) {
+        throw new Error('signature required')
+      }
+
+      if (!elements.every(elem => elem instanceof TYPE)) {
+        throw new Error('signature required')
+      }
+
+      signature = this.bra + elements.map(el => el.signature()).join('') + this.ket
     }
-  }
 
-  constructByValues (sig, values) {
-    throw new Error('not implemented, yet')
+    if (typeof signature !== 'string') {
+      throw new TypeError('signature not a string')
+    }
+
+    if (signature.length < 3 ||
+      !signature.startsWith(this.bra) ||
+      !signature.endsWith(this.ket)) {
+      throw new Error('invalid signature')
+    }
+
+    this.sig = signature
+    this.esigs = split(signature.slice(1, signature.length - 1))
+    if (this.esigs.find(s => s.startsWith('{'))) {
+      throw new Error('DICT_ENTRY can only be element of ARRAY')
+    }
+
+    this.elems = []
+    if (Array.isArray(elements)) {
+      elements.forEach(el => this.push(el))
+    }
   }
 
   eval () {
@@ -1124,53 +1142,23 @@ class STRUCT extends CONTAINER {
  * DICT_ENTRY
  */
 class DICT_ENTRY extends STRUCT {
-  constructBySignature (sig) {
-    if (!/^\{.+\}$/.test(sig)) throw new Error('invalid DICT_ENTRY signature')
-    const esigs = split(sig.slice(1, sig.length - 1))
-    if (esigs.length !== 2) {
-      throw new Error('dict entry requires exactly two elements as key value')
-    } else if (!basicTypeCodes.includes(esigs[0])) {
+  /**
+   * Constructs a DICT_ENTRY
+   */
+  constructor (signature, elements) {
+    super(signature, elements)
+
+    if (this.esigs.length !== 2) {
+      throw new Error('dict entry must have exactly two elements as key value')
+    }
+
+    if (!basicTypeCodes.includes(this.esigs[0])) {
       throw new Error('dict entry key must be of a basic type')
     }
-    this.esigs = esigs
-    this.sig = sig
-    this.elems = []
-  }
 
-  // partial construction allowed if sig provided
-  constructByElements (elems, sig) {
-    if (sig) {
-      this.constructBySignature(sig)
-      elems.forEach(e => this.push(e))
-    } else {
-      if (elems.length !== 2) {
-        throw new Error('dict entry requires exactly two elements as key-value')
-      } else if (!basicTypeCodes.includes(elems[0].signature())) {
-        throw new Error('dict entry key must be of a basic type')
-      }
-
-      this.esigs = elems.map(e => e.signature())
-      this.sig = '{' + this.esigs.join('') + '}'
-      this.elems = elems
+    if (this.elems.length && this.elems.length !== 2) {
+      throw new Error('partial construction not allowed for dict entry')
     }
-  }
-
-  constructByValues (sig, values) {
-    if (!/^\{.+\}$/.test(sig)) {
-      throw new Error('invalid DICT_ENTRY signature')
-    }
-
-    this.sig = sig
-    const esigs = split(sig.slice(1, sig.length - 1))
-    if (values.length !== 2 || esigs.length !== 2) {
-      throw new Error('dict entry requires exactly two elements as key value')
-    }
-
-    this.esigs = esigs
-    this.elems = [
-      new TYPE(esigs[0], values[0]),
-      new TYPE(esigs[1], values[1])
-    ]
   }
 
   eval () {
@@ -1188,6 +1176,9 @@ class VARIANT extends CONTAINER {
   // new VARIANT(TYPE) -> construct by elements
   // new VARIANT(esig, non-TYPE) -> construct by value ???
   constructor (...args) {
+
+    console.log('******', ...args)
+
     if (args.length === 0) {
       super('v')
     } else {
@@ -1274,8 +1265,8 @@ assign(STRING, { code: 's', align: 4 })
 assign(OBJECT_PATH, { code: 'o', align: 4 })
 assign(SIGNATURE, { code: 'g', align: 1 })
 assign(ARRAY, { code: 'a', align: 4 })
-assign(STRUCT, { code: '(', align: 8 })
-assign(DICT_ENTRY, { code: '{', align: 8 })
+assign(STRUCT, { code: '(', align: 8, bra: '(', ket: ')' })
+assign(DICT_ENTRY, { code: '{', align: 8, bra: '{', ket: '}' })
 assign(VARIANT, { code: 'v', align: 1 })
 
 TYPE.prototype._map = {

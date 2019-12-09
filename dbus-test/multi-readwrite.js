@@ -50,7 +50,7 @@ describe(path.basename(__filename) +
   it('empty dict if no children', done => {
     client.GetManagedObjects(server.myName, '/', (err, body) => {
       expect(err).to.equal(null)
-      expect(body).to.deep.equal([new ARRAY([], 'a{oa{sa{sv}}}')])
+      expect(body).to.deep.equal([new ARRAY('a{oa{sa{sv}}}')])
       done()
     })
   })
@@ -66,11 +66,11 @@ describe(path.basename(__filename) +
         new ARRAY([
           new DICT_ENTRY([
             new STRING('org.freedesktop.DBus.Properties'),
-            new ARRAY([], 'a{sv}')
+            new ARRAY('a{sv}')
           ]),
           new DICT_ENTRY([
             new STRING('com.example.readwrite'),
-            new ARRAY([
+            new ARRAY('a{sv}', [
               new DICT_ENTRY([
                 new STRING('Read'),
                 new VARIANT(new STRING('hello'))
@@ -79,13 +79,10 @@ describe(path.basename(__filename) +
                 new STRING('ReadWrite'),
                 new VARIANT(new STRING('foo'))
               ])
-            ], 'a{sv}')
+            ])
           ])
         ])  
       ])
-
-      console.log(s.body[1].eval())
-
       done()
     })
     server.addNode({
@@ -121,11 +118,11 @@ describe(path.basename(__filename) +
           new ARRAY([
             new DICT_ENTRY([
               new STRING('org.freedesktop.DBus.Properties'),
-              new ARRAY([], 'a{sv}')
+              new ARRAY('a{sv}')
             ]),
             new DICT_ENTRY([
               new STRING('com.example.readwrite'),
-              new ARRAY([
+              new ARRAY('a{sv}', [
                 new DICT_ENTRY([
                   new STRING('Read'),
                   new VARIANT(new STRING('hello'))
@@ -134,7 +131,7 @@ describe(path.basename(__filename) +
                   new STRING('ReadWrite'),
                   new VARIANT(new STRING('foo'))
                 ])
-              ], 'a{sv}')
+              ])
             ])
           ])  
         ])

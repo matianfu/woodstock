@@ -108,7 +108,7 @@ module.exports = {
             new STRING(name),
             new VARIANT(changedProperties[name])
           ]))),
-        new ARRAY(invalidatedProperties.map(name => new STRING(name)), 'as')
+        new ARRAY('as', invalidatedProperties.map(name => new STRING(name)))
       ]
     })
   }

@@ -51,6 +51,11 @@ describe(path.basename(__filename), () => {
   it('constructing INT16 with -32769 throws RangeError', () =>
     expect(() => new INT16(-32769)).to.throw(RangeError))
 
- 
+/**
+  it('marshalling and unmarshalling 12234', () => {
+    const i0 = new INT16(12234)
+    const len = i0.marshal(null, 0, true) 
+  }) 
+*/
 })
 

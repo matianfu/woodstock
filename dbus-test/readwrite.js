@@ -160,7 +160,7 @@ describe(path.basename(__filename) +
             new VARIANT(new STRING('bar'))
           ])
         ]),
-        new ARRAY([], 'as')
+        new ARRAY('as')
       ])
       done()
     })
@@ -192,7 +192,7 @@ describe(path.basename(__filename) +
               new VARIANT(new STRING('bar'))
             ])
           ]),
-          new ARRAY([], 'as')
+          new ARRAY('as')
         ])
         done()
       })

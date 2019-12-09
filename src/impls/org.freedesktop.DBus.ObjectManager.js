@@ -56,7 +56,8 @@ const om = {
       }
     })
 
-    return new ARRAY(nodes, 'a{oa{sa{sv}}}')
+    //return new ARRAY(nodes, 'a{oa{sa{sv}}}')
+    return new ARRAY('a{oa{sa{sv}}}', nodes)
   },
 
   /**
@@ -80,10 +81,14 @@ const om = {
           }
         })
 
-        ifaces.push(new DICT_ENTRY([new STRING(ifaceName), new ARRAY(props, 'a{sv}')]))
+        ifaces.push(new DICT_ENTRY([
+          new STRING(ifaceName), 
+//          new ARRAY(props, 'a{sv}')
+          new ARRAY('a{sv}', props)
+        ]))
       })
 
-      const ifacesAndProps = new ARRAY(ifaces, 'a{sa{sv}}')
+      const ifacesAndProps = new ARRAY('a{sa{sv}}', ifaces)
 
       this.node.signal({
         origin: null,

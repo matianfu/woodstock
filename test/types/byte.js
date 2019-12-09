@@ -10,11 +10,9 @@ const {
 
 describe(path.basename(__filename), () => {
   it('static BYTE properties', done => {
-    expect(BYTE.prototype._code).to.equal('y')
-    expect(BYTE.prototype._align).to.equal(1)
-    expect(BYTE.prototype._size).to.equal(1)
-    expect(BYTE.prototype._sign).to.equal(false)
-    expect(BYTE.prototype._bits).to.equal(8)
+    expect(BYTE.prototype.code).to.equal('y')
+    expect(BYTE.prototype.align).to.equal(1)
+    expect(BYTE.prototype.size).to.equal(1)
     done()
   })
 

@@ -10,8 +10,8 @@ const {
 
 describe(path.basename(__filename), () => {
   it('static ARRAY properties', done => {
-    expect(ARRAY.prototype._code).to.equal('a')
-    expect(ARRAY.prototype._align).to.equal(4)
+    expect(ARRAY.prototype.code).to.equal('a')
+    expect(ARRAY.prototype.align).to.equal(4)
     done()
   })
 

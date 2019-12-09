@@ -151,7 +151,8 @@ class DBus extends EventEmitter {
     this.role = opts.role
 
     /**
-     *
+     * interfaces stores interface definition
+     * @type {object[]}
      */
     this.interfaces = []
     if (opts.interfaces) {
@@ -219,11 +220,8 @@ class DBus extends EventEmitter {
      *
      */
     this.connected = false
-
     this.on('connect', () => this.connected = true)
-
     this.connect((err, socket) => {})
-
     this.on('signal', s => this.onSignal(s))
   }
 

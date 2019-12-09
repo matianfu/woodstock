@@ -10,21 +10,22 @@ const {
 
 describe(path.basename(__filename), () => {
   it('static INT16 properties', done => {
-    expect(INT16.prototype._code).to.equal('n')
-    expect(INT16.prototype._align).to.equal(2)
-    expect(INT16.prototype._size).to.equal(2)
-    expect(INT16.prototype._sign).to.equal(true)
-    expect(INT16.prototype._bits).to.equal(16)
+    expect(INT16.prototype.code).to.equal('n')
+    expect(INT16.prototype.align).to.equal(2)
+    expect(INT16.prototype.size).to.equal(2)
     done()
   })
 
-  it('INT16 constructed w/o value should have no value', done => {
+  it('INT16 constructed without value should have no value', done => {
     const i = new INT16()
     expect(i.hasOwnProperty('value')).to.be.false
     done()
   })
 
-  it('construct INT16 with 0', done => {
+  it('constructing INT16 with true should throw TypeError', () => 
+    expect(() => new INT16(true)).to.throw(TypeError))
+
+  it('constructing INT16 with 0', done => {
     const i = new INT16(0)
     expect(i.value).to.equal(0)
     done()
@@ -47,10 +48,8 @@ describe(path.basename(__filename), () => {
     done()
   })
 
-  it('constructing INT16 with -32769 throws RangeError', done => {
-    expect(() => new INT16(-32769)).to.throw(RangeError)
-    done()
-  })
+  it('constructing INT16 with -32769 throws RangeError', () =>
+    expect(() => new INT16(-32769)).to.throw(RangeError))
 
  
 })

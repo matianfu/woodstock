@@ -245,7 +245,10 @@ class DBus extends EventEmitter {
     let auth = false
 
     socket.on('error', handleError)
-    socket.on('close', () => console.log('unexpected close'))
+    socket.on('close', () => {
+      // console.log('unexpected close')
+    })
+
     socket.on('data', data => {
       if (!auth) {
         const s = data.toString().trim()
@@ -821,6 +824,13 @@ class DBus extends EventEmitter {
    * org.freedesktop.DBus.Introspectable.Introspect
    */
   Introspect () {
+  }
+
+  /**
+   *
+   */
+  end () {
+    this.socket.end()
   }
 }
 

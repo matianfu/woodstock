@@ -46,6 +46,11 @@ describe(path.basename(__filename) +
     })
   })
 
+  afterEach(() => {
+    server.end()
+    client.end()
+  })
+
   it('Get Read should succeed', done =>
     client.GetProp(server.myName, '/', 'com.example.readwrite', 'Read',
       (err, body) => {

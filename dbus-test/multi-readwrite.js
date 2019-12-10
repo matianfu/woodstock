@@ -47,6 +47,11 @@ describe(path.basename(__filename) +
     })
   })
 
+  afterEach(() => {
+    server.end()
+    client.end()
+  })
+
   it('empty dict if no children', done => {
     client.GetManagedObjects(server.myName, '/', (err, body) => {
       expect(err).to.equal(null)

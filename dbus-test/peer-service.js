@@ -9,68 +9,52 @@ const Peer = require('src/interfaces/org.freedesktop.DBus.Peer.js')
 const PeerImpl = require('src/impls/org.freedesktop.DBus.Peer.js')
 
 describe(path.basename(__filename), () => {
-  it('Ping should return nothing', done => {
-    const server = new DBus()
+
+  let server, client
+
+  beforeEach(done => {
+    server = new DBus()
     server.addInterface(Peer)
     server.addImplementation(PeerImpl)
-
-    server.addNode({
-      path: '/',
-      implementations: ['org.freedesktop.DBus.Peer'],
-    })
+    server.addNode({ path: '/', implementations: ['org.freedesktop.DBus.Peer'] })
 
     server.on('connect', () => {
-      if (client.connected) next()
+      if (client.connected) done()
     })
 
-    const client = new DBus()
-
+    client = new DBus()
     client.on('connect', () => {
-      if (server.connected) next()
+      if (server.connected) done()
     })
-
-    const next = () => 
-      client.Ping(server.myName, (err, body) => {
-        expect(err).to.equal(null)  
-        expect(body).to.equal(undefined)
-        done()
-      })
   })
 
-  it('GetMachineId should return server.machineId', done => {
-    const server = new DBus({
-      interfaces: [Peer],
-      implementations: [PeerImpl]
-    })
+  afterEach(() => { 
+    server.end()        
+    client.end()
+  })
 
-    server.addNode({
+  it('Ping should return nothing', done => 
+    client.Ping(server.myName, (err, body) => {
+      expect(err).to.equal(null)  
+      expect(body).to.equal(undefined)
+      done()
+    }))
+
+  it('GetMachineId should return server.machineId', done =>
+    client.methodCall({
+      destination: server.myName,
       path: '/',
-      implementations: ['org.freedesktop.DBus.Peer']
-    })
-
-    server.on('connect', () => {
-      if (client.connected) next()
-    })
-
-    const client = new DBus()
-
-    client.on('connect', () => {
-      if (server.connected) next()
-    })
-
-    const next = () => {
-      client.methodCall({
-        destination: server.myName,
-        path: '/',
-        interface: 'org.freedesktop.DBus.Peer',
-        member: 'GetMachineId'
-      }, (err, body) => {
-        expect(err).to.equal(null)
-        expect(body).to.be.an('array')
-        expect(body[0]).to.be.an.instanceof(STRING)
-        expect(body[0].value).to.equal(server.machineId)
-        done()
-      })
-    }
-  })
+      interface: 'org.freedesktop.DBus.Peer',
+      member: 'GetMachineId'
+    }, (err, body) => {
+      expect(err).to.equal(null)
+      expect(body).to.be.an('array')
+      expect(body[0]).to.be.an.instanceof(STRING)
+      expect(body[0].value).to.equal(server.machineId)
+      done()
+    }))
 })
+
+
+
+

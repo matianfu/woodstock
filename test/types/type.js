@@ -30,7 +30,7 @@ const {
 } = require('src/types')
 
 describe(path.basename(__filename), () => {
-  it('verify prototyp._map', done => {
+  it.skip('verify prototyp._map', done => {
     expect(TYPE.prototype._map).to.deep.equal({
       'y': BYTE,
       'n': INT16,

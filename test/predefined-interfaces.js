@@ -29,4 +29,3 @@ describe(path.basename(__filename), () => {
   })
 })
 
-console.dir(ifaces, { depth: 5 })

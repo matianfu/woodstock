@@ -1,3 +1,4 @@
+const path = require('path')
 const debug = require('debug')
 const { split, slice } = require('./signature')
 
@@ -86,16 +87,16 @@ t       UINT64                8       8       o: bigint
 d       DOUBLE                8       8       o: number
 h       UNIX_FD               4       4       o: number
 
-      STRING_LIKE
+      (STRING_LIKE)
 s       STRING                        4       o: string
-o       OBJECT_PATH                   4       o: string
-g       SIGNATURE                     1       o: string
+o         OBJECT_PATH                 4       o: string
+g         SIGNATURE                   1       o: string
 
     CONTAINER
-a       ARRAY                         4       m: string (sig) | TYPE[]
-(       STRUCT                        8       m: string (sig) | TYPE[]
-v       VARIANT                       1       m: string = 'v' | TYPE[] = [SIGNATURE, TYPE]
-{       DICT_ENTRY                    8       m: string (sig) | TYPE[] = [BASIC_TYPE, TYPE]
+a       ARRAY                         4       m: string (sig), TYPE[]
+(       STRUCT                        8       m: string (sig), TYPE[]
+{         DICT_ENTRY                  8       m: string (sig), [BASIC_TYPE, TYPE]
+v       VARIANT                       1       m: string = 'v' | TYPE
 ```
 
 @module Types
@@ -151,7 +152,28 @@ class TYPE {
    * @returns {string} type code character
    */
   type (sig) {
-    return this._map[sig[0]]
+    if (typeof sig !== 'string') throw new TypeError('sig not a string')
+
+    switch (sig[0]) {
+      case 'y': return BYTE
+      case 'n': return INT16
+      case 'q': return UINT16
+      case 'i': return INT32
+      case 'u': return UINT32
+      case 'b': return BOOLEAN
+      case 'h': return UNIX_FD
+      case 'x': return INT64
+      case 't': return UINT64
+      case 'd': return DOUBLE
+      case 's': return STRING
+      case 'o': return OBJECT_PATH
+      case 'g': return SIGNATURE
+      case 'a': return ARRAY
+      case '(': return STRUCT
+      case '{': return DICT_ENTRY
+      case 'v': return VARIANT
+      default: throw new Error('xxx')
+    }
   }
 
   /**
@@ -422,6 +444,9 @@ class INT32 extends FIXED_TYPE {
     }
   }
 
+  /**
+   *
+   */
   write (buf, offset, le) {
     if (le) {
       buf.writeUInt16LE(this.value, offset)
@@ -430,6 +455,9 @@ class INT32 extends FIXED_TYPE {
     }
   }
 
+  /**
+   *
+   */
   read (buf, offset, le) {
     if (le) {
       return buf.readUInt16LE(offset)
@@ -463,6 +491,9 @@ class UINT32 extends FIXED_TYPE {
     }
   }
 
+  /**
+   *
+   */
   write (buf, offset, le) {
     if (le) {
       buf.writeUInt32LE(this.value, offset)
@@ -471,6 +502,9 @@ class UINT32 extends FIXED_TYPE {
     }
   }
 
+  /**
+   *
+   */
   read (buf, offset, le) {
     if (le) {
       return buf.readUInt32LE(offset)
@@ -503,8 +537,6 @@ class BOOLEAN extends UINT32 {
 }
 
 /**
- * Unix File Descriptor
- *
  * UNIX_FD is a UINT32 with different type code
  */
 class UNIX_FD extends UINT32 {}
@@ -571,7 +603,7 @@ class INT64 extends FIXED_TYPE {
       low = buf.readUInt32BE(offset)
     }
 
-    const value = BigInt(high) * POWE32 + BigInt(low)
+    const value = BigInt(high) * POW32 + BigInt(low)
     this.value = value < (POW64 / 2n) ? value : value - POW64
   }
 }
@@ -636,7 +668,7 @@ class UINT64 extends FIXED_TYPE {
       low = buf.readUInt32BE(offset)
     }
 
-    this.value = BigInt(high) * POWE32 + BigInt(low)
+    this.value = BigInt(high) * POW32 + BigInt(low)
   }
 }
 
@@ -680,17 +712,17 @@ class DOUBLE extends FIXED_TYPE {
    */
   read (buf, offset, le) {
     if (le) {
-      return buf.readDoubleLE(offset) 
-    } else { 
+      return buf.readDoubleLE(offset)
+    } else {
       return buf.readDoubleBE(offset)
     }
   }
 }
 
 /**
- * 
+ *
  */
-class STRING_LIKE extends BASIC_TYPE {
+class STRING extends BASIC_TYPE {
   /**
    * Constructs a String-like type
    *
@@ -719,7 +751,7 @@ class STRING_LIKE extends BASIC_TYPE {
     offset = round(offset, this.align)
     const $1 = offset
 
-    buf && this.write(buf, offset, le)
+    buf && this.writeLen(buf, offset, le)
     offset += this.align // happens to be the same value
     buf && buf.write(this.value, offset)
     offset += this.value.length
@@ -729,6 +761,14 @@ class STRING_LIKE extends BASIC_TYPE {
     logm($, this.constructor.name, `${$0}/${$1} to ${offset}, "${this.value}"`)
 
     return offset
+  }
+
+  writeLen (buf, offset, le) {
+    if (le) {
+      buf.writeUInt32LE(this.value.length, offset)
+    } else {
+      buf.writeUInt32BE(this.value.length, offset)
+    }
   }
 
   /**
@@ -758,24 +798,6 @@ class STRING_LIKE extends BASIC_TYPE {
   }
 }
 
-/**
- * String
- */
-class STRING extends STRING_LIKE {
-  constructor (value) {
-    super(value)
-    if (value) this.value = value
-  }
-
-  write (buf, offset, le) {
-    if (le) {
-      buf.writeUInt32LE(this.value.length, offset)
-    } else {
-      buf.writeUInt32BE(this.value.length, offset)
-    }
-  }
-}
-
 STRING.from = value => {
   if (typeof value !== 'string') throw new TypeError('value not a string')
   return new STRING(value)
@@ -785,22 +807,34 @@ STRING.from = value => {
  * Object Path (same as STRING except for type code)
  */
 class OBJECT_PATH extends STRING {
+  /**
+   * Constructs an OBJECT_PATH
+   */
   constructor (value) {
     super(value)
-    // TODO validate
+    if (Object.prototype.hasOwnProperty.call(this, 'value')) {
+      if (!path.isAbsolute(this.value) || path.normalize(this.value) !== this.value) {
+        throw new RangeError('invalid object path')
+      }
+    }
   }
 }
 
 /**
  * Signature (same as STRING except for type code and alignment)
  */
-class SIGNATURE extends STRING_LIKE {
+class SIGNATURE extends STRING {
+  /**
+   * Constructs an SIGNATURE
+   */
   constructor (value) {
     super(value)
-    // TODO validate
+    if (Object.prototype.hasOwnProperty.call(this, 'value')) {
+      split(this.value)
+    }
   }
 
-  write (buf, offset, le) {
+  writeLen (buf, offset, le) {
     buf.writeUInt8(this.value.length, offset)
   }
 
@@ -814,78 +848,13 @@ class SIGNATURE extends STRING_LIKE {
 /**
  * CONTAINER is the base class of ARRAY, STRUCT, DICT_ENTRY and VARIANT.
  *
- * All container types are constructed with a signature and an array 
- * containing elements. Strictly, all elements should be DBus TYPE objects. 
- * However, this makes code tedious and unreadable. So mixing JavaScript type 
- * DBus TYPE is allowed. Elements of JavaScript type could be primitive type 
+ * All container types are constructed with a signature and an array
+ * containing elements. Strictly, all elements should be DBus TYPE objects.
+ * However, this makes code tedious and unreadable. So mixing JavaScript type
+ * DBus TYPE is allowed. Elements of JavaScript type could be primitive type
  * or an array for containers. Other data types are not allowed.
  */
 class CONTAINER extends TYPE {
-  // new CONTAINER(signature) constructs an empty object, intended for unmarshalling.
-  // new CONTAINER(elems, signature) constructs an object loaded with elements, signature is optional, if provided, the constructor will check if they are match.
-  // new CONTAINER(signature, vals) constructs an object loaded with elements converted from vals, signature is mandatory.
-  // VARIANT is forbidden in construction by value.
-
-  // elems must be an array of TYPE objects, if signature is not provided, the array
-  // must not be empty
-  // signature must be non-empty string
-
-  /**
-   * @param {object} opts
-   * @param {string} opts.signature
-   * @param {TYPE[]} opts.elems - a colletion of elements (TYPE object)
-   * @param {string|number|bigint} opts.vals - a collection of JavaScript values which could be converted to elements
-   */
-  constructor (...args) {
-    super()
-    if (args[0] === undefined) return
-    /**
-     * signature string
-     * @type {string}
-     */
-    this.sig = ''
-
-    /**
-     * an array of TYPE object
-     * @type {TYPE[]}
-     */
-    this.elems = []
-
-    if (args.length === 1) {
-      if (typeof args[0] === 'string') {
-        this.constructBySignature(args[0])
-        return
-      } else if (Array.isArray(args[0])) {
-        if (!args[0].every(e => e instanceof TYPE)) {
-          throw new Error('elems contains non-TYPE object')
-        }
-        this.constructByElements(args[0])
-        return
-      }
-    } else if (args.length === 2) {
-      if (Array.isArray(args[0]) && typeof args[1] === 'string') {
-        if (!args[0].every(e => e instanceof TYPE)) {
-          console.log(args[0])
-          throw new Error('elems contains non-TYPE object')
-        }
-        this.constructByElements(args[0], args[1])
-        return
-      } else if (typeof args[0] === 'string' && Array.isArray(args[1])) {
-        if (!args[1].every(e => !(e instanceof TYPE))) {
-          throw new Error('elems contains TYPE object')
-        }
-
-        throw new Error('breaking change')
-
-        log('constructByValues', this.constructor.name, args[0], args[1])
-
-        this.constructByValues(args[0], args[1])
-        return
-      }
-    }
-    throw new Error('bad arg number')
-  }
-
   signature () {
     return this.sig
   }
@@ -926,12 +895,12 @@ class ARRAY extends CONTAINER {
     super()
 
     if (Array.isArray(signature)) {
-      elements = signature 
+      elements = signature
       if (!elements.length) {
         throw new Error('signature required')
       }
 
-      if (!elements.every(el => el instanceof TYPE && 
+      if (!elements.every(el => el instanceof TYPE &&
         el.signature() === elements[0].signature())) {
         throw new Error('signature required')
       }
@@ -942,7 +911,7 @@ class ARRAY extends CONTAINER {
     if (signature[0] !== 'a') {
       throw new Error('not an ARRAY signature')
     }
-  
+
     this.sig = signature
     this.esig = this.sig.slice(1) // TODO single complete type
     this.elems = []
@@ -951,32 +920,7 @@ class ARRAY extends CONTAINER {
       elements.forEach(el => this.push(el))
     }
   }
-/**
-  constructBySignature (sig) {
-    if (sig[0] !== 'a') {
-      throw new Error('not an ARRAY signature')
-    }
-    this.sig = sig
-    this.esig = this.sig.slice(1)
-    this.elems = []
-  }
 
-  constructByElements (elems, sig) {
-    if (elems.length === 0) {
-      return this.constructBySignature(sig)
-    } else {
-      const esig = elems[0].signature()
-      if (!elems.every(e => e.signature() === esig)) {
-        throw new Error('ARRAY elements must have the same signature')
-      } else if (sig && esig !== sig.slice(1)) {
-        throw new Error('ARRAY elements do not match given signature')
-      }
-      this.elems = elems
-      this.esig = esig
-      this.sig = 'a' + esig
-    }
-  }
-*/
   eval () {
     if (this.esig[0] === '{') {
       const obj = { type: 'dict' }
@@ -1139,7 +1083,8 @@ class STRUCT extends CONTAINER {
 }
 
 /**
- * DICT_ENTRY
+ * DICT_ENTRY is a key-value pair where the key can only be a basic type.
+ * DICT_ENTRY can only be the element of ARRAY.
  */
 class DICT_ENTRY extends STRUCT {
   /**
@@ -1169,54 +1114,28 @@ class DICT_ENTRY extends STRUCT {
 }
 
 /**
- * VARIANT
+ * VARIANT contains single TYPE object
  */
 class VARIANT extends CONTAINER {
-  // new VARIANT() -> construct by signature
-  // new VARIANT(TYPE) -> construct by elements
-  // new VARIANT(esig, non-TYPE) -> construct by value ???
-  constructor (...args) {
-
-    console.log('******', ...args)
-
-    if (args.length === 0) {
-      super('v')
-    } else {
-      if (args.length === 1) {
-        if (args[0] === 'v') {
-          super('v')
-        } else {
-          super([args[0]], 'v')
-        }
-      } else {
-        super(...args)
-      }
-    }
-  }
-
-  // sig is always 'v'
-  constructBySignature (sig) {
-    this.sig = sig
-    this.esigs = []
-    this.elems = []
-  }
-
-  // ???
-  constructByElements ([elem], sig) {
-    this.elems = [new SIGNATURE(elem.signature()), elem]
-    this.esigs = this.elems.map(elem => elem.signature())
-    this.sig = sig
-  }
-
-  constructByValues (sig, vals) {
-    if (sig !== 'v') {
-      throw new Error('invalid signature')
-    } else if (vals.length !== 2) {
-      throw new Error('VARIANT reqruires exactly two values as signature and value')
-    }
+  /**
+   * Constructs a VARIANT
+   *
+   * @param {string|TYPE}
+   */
+  constructor (element) {
+    super()
     this.sig = 'v'
-    this.elems = [new SIGNATURE(vals[0]), new TYPE(vals[0], vals[1])]
-    this.esigs = this.elems.map(elem => elem.signature())
+    this.elems = []
+    this.esigs = []
+
+    if (element === 'v' || element === undefined) return
+
+    if (element instanceof TYPE) {
+      this.elems = [new SIGNATURE(element.signature()), element]
+      this.esigs = this.elems.map(elem => elem.signature())
+    } else {
+      throw new Error('VARIANT: non-TYPE object')
+    }
   }
 
   unmarshal (buf, offset, le) {
@@ -1268,26 +1187,6 @@ assign(ARRAY, { code: 'a', align: 4 })
 assign(STRUCT, { code: '(', align: 8, bra: '(', ket: ')' })
 assign(DICT_ENTRY, { code: '{', align: 8, bra: '{', ket: '}' })
 assign(VARIANT, { code: 'v', align: 1 })
-
-TYPE.prototype._map = {
-  y: BYTE,
-  n: INT16,
-  q: UINT16,
-  i: INT32,
-  u: UINT32,
-  b: BOOLEAN,
-  h: UNIX_FD,
-  x: INT64,
-  t: UINT64,
-  d: DOUBLE,
-  s: STRING,
-  o: OBJECT_PATH,
-  g: SIGNATURE,
-  a: ARRAY,
-  '(': STRUCT,
-  '{': DICT_ENTRY,
-  v: VARIANT
-}
 
 module.exports = {
   LITTLE,

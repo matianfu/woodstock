@@ -6,7 +6,7 @@ const expect = chai.expect
 const { STRING } = require('src/types')
 const DBus = require('src/dbus')
 const Peer = require('src/interfaces/org.freedesktop.DBus.Peer.js')
-const PeerImpl = require('src/impls/org.freedesktop.DBus.Peer.js')
+const PeerImpl = require('src/templates/org.freedesktop.DBus.Peer.js')
 
 describe(path.basename(__filename), () => {
 
@@ -15,7 +15,7 @@ describe(path.basename(__filename), () => {
   beforeEach(done => {
     server = new DBus()
     server.addInterface(Peer)
-    server.addImplementation(PeerImpl)
+    server.addTemplate(PeerImpl)
     server.addNode({ path: '/', implementations: ['org.freedesktop.DBus.Peer'] })
 
     server.on('connect', () => {

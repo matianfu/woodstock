@@ -6,7 +6,7 @@ const expect = chai.expect
 const { BYTE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('src/types')
 const DBus = require('src/dbus')
 const Properties = require('src/interfaces/org.freedesktop.DBus.Properties')
-const PropertiesImpl = require('src/impls/org.freedesktop.DBus.Properties')
+const PropertiesImpl = require('src/templates/org.freedesktop.DBus.Properties')
 const ReadWrite = require('src/interfaces/com.example.readwrite')
 
 /**
@@ -22,7 +22,7 @@ describe(path.basename(__filename) +
     server = new DBus()
     server.addInterface(Properties)
     server.addInterface(ReadWrite)
-    server.addImplementation(PropertiesImpl)
+    server.addTemplate(PropertiesImpl)
 
     server.addNode({
       path: '/',

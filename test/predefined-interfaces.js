@@ -5,7 +5,7 @@ const expect = chai.expect
 
 const normalize = require('src/interface') 
 const ifaces = require('src/interfaces')
-const validate = require('src/impls')
+const validate = require('src/templates')
 
 describe(path.basename(__filename), () => {
   it('normalize org.freedesktop.DBus.Peer', done => {

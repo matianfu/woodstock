@@ -603,7 +603,7 @@ class DBus extends EventEmitter {
   /**
    * Adds an implementation TODO rename to addTemplate
    */
-  addImplementation (implementation) {
+  addTemplate (implementation) {
     if (typeof implementation !== 'object' || !implementation) {
       throw new TypeError('implementation not an object')
     }

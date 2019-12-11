@@ -3,8 +3,8 @@ const { TYPE } = require('./types')
 
 const validateImpl = require('./implementation')
 
-const PropertiesImpl = require('./impls/org.freedesktop.DBus.Properties')
-const OmImpl = require('./impls/org.freedesktop.DBus.ObjectManager')
+const PropertiesImpl = require('./templates/org.freedesktop.DBus.Properties')
+const OmImpl = require('./templates/org.freedesktop.DBus.ObjectManager')
 
 /**
  * Node represents a DBus object with object path.

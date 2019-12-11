@@ -9,9 +9,9 @@ const {
 
 const DBus = require('src/dbus')
 const Properties = require('src/interfaces/org.freedesktop.DBus.Properties')
-const PropertiesImpl = require('src/impls/org.freedesktop.DBus.Properties')
+const PropertiesImpl = require('src/templates/org.freedesktop.DBus.Properties')
 const Om = require('src/interfaces/org.freedesktop.DBus.ObjectManager')
-const OmImpl = require('src/impls/org.freedesktop.DBus.ObjectManager')
+const OmImpl = require('src/templates/org.freedesktop.DBus.ObjectManager')
 const ReadWrite = require('src/interfaces/com.example.readwrite')
 
 describe(path.basename(__filename) +
@@ -26,8 +26,8 @@ describe(path.basename(__filename) +
     server.addInterface(Properties)
     server.addInterface(Om)
     server.addInterface(ReadWrite)
-    server.addImplementation(PropertiesImpl)
-    server.addImplementation(OmImpl)
+    server.addTemplate(PropertiesImpl)
+    server.addTemplate(OmImpl)
 
     server.addNode({
       path: '/',

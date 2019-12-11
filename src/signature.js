@@ -42,11 +42,11 @@ const slice = (sig, start, end) => {
           }
         }
       }
-      throw new Error(`unmatched ( at position ${start}`)
+      throw new RangeError(`unmatched ( at position ${start}`)
     }
     case '{': { // DICT_ENTRY
       if (start === 0 || sig[start - 1] !== 'a') {
-        throw new Error(`not an array element type at position ${start}`)
+        throw new RangeError(`not an array element type at position ${start}`)
       }
       let count = 1
       for (let i = start + 1; i < end; i++) {
@@ -56,7 +56,7 @@ const slice = (sig, start, end) => {
           if (!--count) {
             const list = split(sig, start + 1, i)
             if (list.length !== 2) {
-              throw new Error(`not two single complete types at position ${start}`)
+              throw new RangeError(`not two single complete types at position ${start}`)
             }
 
             if (!'ybnqiuxtdhsog'.includes(list[0])) {
@@ -67,10 +67,10 @@ const slice = (sig, start, end) => {
         }
       }
 
-      throw new Error(`unmatched { at position ${start}`)
+      throw new RangeError(`unmatched { at position ${start}`)
     }
     default:
-      throw new Error(`invalid character ${sig[start]} at position ${start}`)
+      throw new RangeError(`invalid character ${sig[start]} at position ${start}`)
   }
 }
 

@@ -296,6 +296,8 @@ const encode = (m, serial, name = '') => {
 
   header.push(fields)
 
+  // TODO console.log(header.marshal(null, 0, true))
+
   const hlen = header.marshal(headerBuf, 0, LITTLE)
 
   return Buffer.concat([

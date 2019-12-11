@@ -110,6 +110,11 @@ const round = (offset, modulo) => Math.ceil(offset / modulo) * modulo
 
 /**
  * TYPE is the base class of all DBus data type classes.
+ *
+ * All TYPE objects has the following methods:
+ * - signature
+ * - eval, returns a non-TYPE JavaScript object. The signature information is lost.
+ * - ulgy, returns a JavaScript object preserving signature, but looks ugly.
  */
 class TYPE {
   /**
@@ -195,10 +200,10 @@ class TYPE {
  */
 class BASIC_TYPE extends TYPE {
   /**
-   * returns value TODO
+   *
    */
   eval () {
-    return JSON.stringify({ [this.signature()]: this.value })
+    return this.value
   }
 }
 
@@ -221,7 +226,8 @@ class FIXED_TYPE extends BASIC_TYPE {
     offset = round(offset, this.align)
 
     if (!buf) return offset + this.size
-    if (offset + this.size > buf.length) {
+
+    if (offset + this.size > buf.length) { // useless
       throw new RangeError('marshaling beyond buffer length')
     }
 
@@ -250,7 +256,7 @@ class FIXED_TYPE extends BASIC_TYPE {
 }
 
 /**
- * BYTE
+ * BYTE is an unsigned int stored with 8 bits
  */
 class BYTE extends FIXED_TYPE {
   /**
@@ -286,7 +292,7 @@ class BYTE extends FIXED_TYPE {
   }
 
   /**
-   * Writes value to buffer at given offset.
+   * Writes value to buffer
    *
    * @param {Buffer|null} buf
    * @param {number} offset
@@ -308,7 +314,7 @@ class BYTE extends FIXED_TYPE {
 }
 
 /**
- * INT16
+ * INT16 is a signed integer stored with 16 bits.
  */
 class INT16 extends FIXED_TYPE {
   /**
@@ -365,11 +371,12 @@ class INT16 extends FIXED_TYPE {
 }
 
 /**
- * UINT16
+ * UINT16 is an unsigned integer stored with 16 bits.
  */
 class UINT16 extends FIXED_TYPE {
   /**
-   * Constructs a UINT16 type object
+   * Constructs a UINT16
+   *
    * @throws {TypeError} if value not an integer
    * @throws {RangeError} if value out of range
    */
@@ -389,11 +396,11 @@ class UINT16 extends FIXED_TYPE {
   }
 
   /**
-   * Writes value into buffer
+   * Writes value to buffer
    *
    * @param {Buffer} buf
    * @param {number} offset
-   * @param {boolean} le - true for little-endian, false for big-endian
+   * @param {boolean} le - true for little-endian
    */
   write (buf, offset, le) {
     if (le) {
@@ -404,12 +411,12 @@ class UINT16 extends FIXED_TYPE {
   }
 
   /**
-   * Reads value from buffer at given offset with provided endianness
+   * Reads value from buffer
    *
    * @param {Buffer} buf
    * @param {number} offset
-   * @param {boolean} le - true for little-endian, false for big-endian
-   * @returns {number} an integer ranging from -32,768 to 32767
+   * @param {boolean} le - true for little-endian
+   * @returns {number} an integer in range
    */
   read (buf, offset, le) {
     if (le) {
@@ -421,7 +428,7 @@ class UINT16 extends FIXED_TYPE {
 }
 
 /**
- * INT32
+ * INT32 is an signed integer stored with 32 bits.
  */
 class INT32 extends FIXED_TYPE {
   /**
@@ -468,7 +475,7 @@ class INT32 extends FIXED_TYPE {
 }
 
 /**
- * Unsigned Int32
+ * UINT32 is an unsigned integer stored with 32 bits.
  */
 class UINT32 extends FIXED_TYPE {
   /**
@@ -515,10 +522,7 @@ class UINT32 extends FIXED_TYPE {
 }
 
 /**
- * BOOLEAN
- *
- * A BOOLEAN is a UINT32 with differen type code and value range.
- * The value is stored as number 0 or 1.
+ * In DBus data types, BOOLEAN is a UINT32 with differen code and ranging from 0 to 1.
  */
 class BOOLEAN extends UINT32 {
   /**
@@ -533,7 +537,9 @@ class BOOLEAN extends UINT32 {
     super(value)
   }
 
-  // TODO eval and invalid read
+  eval () {
+    return !!this.value
+  }
 }
 
 /**
@@ -763,6 +769,9 @@ class STRING extends BASIC_TYPE {
     return offset
   }
 
+  /**
+   * Writes string length to buffer
+   */
   writeLen (buf, offset, le) {
     if (le) {
       buf.writeUInt32LE(this.value.length, offset)
@@ -853,16 +862,26 @@ class SIGNATURE extends STRING {
  * However, this makes code tedious and unreadable. So mixing JavaScript type
  * DBus TYPE is allowed. Elements of JavaScript type could be primitive type
  * or an array for containers. Other data types are not allowed.
+ * 
  */
 class CONTAINER extends TYPE {
+  /**
+   *
+   */
   signature () {
     return this.sig
   }
 
+  /**
+   *
+   */
   eval () {
     return this.elems.map(elem => elem.eval())
   }
 
+  /**
+   *
+   */
   marshal (buf, offset, le) {
     const $0 = offset
     offset = round(offset, this.align)
@@ -889,7 +908,8 @@ class ARRAY extends CONTAINER {
   /**
    * Constructs an ARRAY
    *
-   * TODO
+   * @param {string} [signature]
+   * @param {Array} [elements]
    */
   constructor (signature, elements) {
     super()
@@ -908,12 +928,21 @@ class ARRAY extends CONTAINER {
       signature = 'a' + elements[0].signature()
     }
 
+    if (typeof signature !== 'string') {
+      throw new TypeError('signature not a string')
+    }
+
+    const sigs = split(signature)
+    if (sigs.length !== 1) {
+      throw new RangeError('signature not a single complete type')
+    }
+
     if (signature[0] !== 'a') {
-      throw new Error('not an ARRAY signature')
+      throw new RangeError('not an ARRAY signature')
     }
 
     this.sig = signature
-    this.esig = this.sig.slice(1) // TODO single complete type
+    this.esig = this.sig.slice(1)
     this.elems = []
 
     if (Array.isArray(elements)) {
@@ -921,19 +950,10 @@ class ARRAY extends CONTAINER {
     }
   }
 
-  eval () {
-    if (this.esig[0] === '{') {
-      const obj = { type: 'dict' }
-      this.elems.forEach(elem => {
-        obj[elem.elems[0].eval()] = elem.elems[1].eval()
-      })
-      return obj
-    } else {
-      return { array: this.elems.map(elem => elem.eval()) }
-    }
-  }
-
-  // return offset TODO elem align refactor
+  // return offset TODO elem align refactor, what does this mean?
+  /**
+   *
+   */
   marshal (buf, offset, le) {
     const $0 = offset
     offset = round(offset, 4)
@@ -954,9 +974,9 @@ class ARRAY extends CONTAINER {
 
     const num = offset - elemOffset
     if (le) {
-      buf.writeUInt32LE(num, numOffset)
+      buf && buf.writeUInt32LE(num, numOffset)
     } else {
-      buf.writeUInt32BE(num, numOffset)
+      buf && buf.writeUInt32BE(num, numOffset)
     }
 
     $less()
@@ -966,6 +986,9 @@ class ARRAY extends CONTAINER {
     return offset
   }
 
+  /**
+   *
+   */
   unmarshal (buf, offset, le) {
     const d0 = offset
     offset = round(offset, this.align)
@@ -991,10 +1014,40 @@ class ARRAY extends CONTAINER {
     return elemStart + num
   }
 
+  /**
+   * Adds a new element into array
+   * 
+   * @param {TYPE} elem - elem should be a TYPE object. If not, this function
+   * will construct a TYPE object with esig and elem.
+   */
   push (elem) {
-    if (elem.signature() !== this.esig) throw new Error('signature mismatch')
-    this.elems.push(elem)
-    return this
+    if (elem instanceof TYPE) {
+      if (elem.signature() !== this.esig) throw new Error('signature mismatch')
+      this.elems.push(elem)
+      return this
+    } else {
+      return this.push(new TYPE(this.esig, elem))
+    }
+  }
+
+  /**
+   * returns an array of elements. If the ARRAY is a DICT, if the key is string
+   * like type, returns a JavaScript object. If the key is other basic type,
+   * returns a JavaScript Map.
+   */
+  eval () {
+    if (this.esig[0] === '{') {
+      if ('sog'.includes(this.esig[1])) { // string like key
+        return this.elems.reduce((o, dentry) => 
+          Object.assign(o, {
+            [dentry.elems[0].eval()]: dentry.elems[1].eval()
+          }), {})
+      } else {  // other basic type 
+        return new Map(super.eval())
+      }
+    } else {
+      return super.eval()
+    }
   }
 }
 
@@ -1047,10 +1100,6 @@ class STRUCT extends CONTAINER {
     }
   }
 
-  eval () {
-    return this.elems.map(elem => elem.eval())
-  }
-
   unmarshal (buf, offset, le) {
     const d0 = offset
     offset = round(offset, this.align)
@@ -1072,6 +1121,9 @@ class STRUCT extends CONTAINER {
     return offset
   }
 
+  /**
+   *
+   */
   push (elem) {
     if (this.elems.length >= this.esigs.length) throw new Error('elems full')
     if (elem.signature() !== this.esigs[this.elems.length]) {
@@ -1105,12 +1157,6 @@ class DICT_ENTRY extends STRUCT {
       throw new Error('partial construction not allowed for dict entry')
     }
   }
-
-  eval () {
-    return Object.assign([this.elems[0].eval(), this.elems[1].eval()], {
-      sig: this.signature()
-    })
-  }
 }
 
 /**
@@ -1138,6 +1184,9 @@ class VARIANT extends CONTAINER {
     }
   }
 
+  /**
+   *
+   */
   unmarshal (buf, offset, le) {
     const d0 = offset
 
@@ -1160,11 +1209,17 @@ class VARIANT extends CONTAINER {
     return offset
   }
 
+  /**
+   *
+   */
   eval () {
-    return {
-      type: 'variant',
+    return this.elems[1].eval()
+/**
+    return { 
+      signature: this.elems[0].eval(),
       value: this.elems[1].eval()
     }
+*/
   }
 }
 
@@ -1189,27 +1244,8 @@ assign(DICT_ENTRY, { code: '{', align: 8, bra: '{', ket: '}' })
 assign(VARIANT, { code: 'v', align: 1 })
 
 module.exports = {
-  LITTLE,
-  BIG,
-  POW32,
-  POW64,
-  TYPE,
-  BYTE,
-  BOOLEAN,
-  INT16,
-  UINT16,
-  INT32,
-  UINT32,
-  INT64,
-  UINT64,
-  DOUBLE,
-  UNIX_FD,
-  STRING,
-  OBJECT_PATH,
-  SIGNATURE,
-  CONTAINER,
-  ARRAY,
-  STRUCT,
-  DICT_ENTRY,
-  VARIANT
+  LITTLE, BIG, POW32, POW64,
+  TYPE, BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64, DOUBLE, UNIX_FD,
+  STRING, OBJECT_PATH, SIGNATURE,
+  CONTAINER, ARRAY, STRUCT, DICT_ENTRY, VARIANT
 }

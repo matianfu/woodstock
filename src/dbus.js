@@ -832,6 +832,35 @@ class DBus extends EventEmitter {
   end () {
     this.socket.end()
   }
+
+  /**
+   *
+   */
+  wpaProps (callback) {
+    const service = 'fi.w1.wpa_supplicant1'
+    const objectPath = '/fi/w1/wpa_supplicant1'
+    const iface =  'fi.w1.wpa_supplicant1'
+    this.GetAllProps(service, objectPath, iface, (err, body) => {
+      if (err) return callback(err)
+
+      const arr = body[0].elems.map(de => de.elems)
+
+      /**
+       * DebugLevel "s"
+       * DebugTimestamp "b"
+       * DebugShowKeys "b"
+       * Interfaces "ao"
+       * EapMethods "as"
+       * Capabilities "as"
+       * WFDIEs "ay"
+       */
+      const obj = {}
+
+      arr.map(([k, v]) => (obj[k.value] = v.elems[1].eval()))
+      
+      callback(null, obj)  
+    })
+  }
 }
 
 module.exports = DBus

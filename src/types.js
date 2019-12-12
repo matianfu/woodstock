@@ -618,7 +618,7 @@ class INT64 extends FIXED_TYPE {
     }
 
     const value = BigInt(high) * POW32 + BigInt(low)
-    this.value = value < (POW64 / 2n) ? value : value - POW64
+    return value < (POW64 / 2n) ? value : (value - POW64)
   }
 }
 
@@ -682,7 +682,7 @@ class UINT64 extends FIXED_TYPE {
       low = buf.readUInt32BE(offset)
     }
 
-    this.value = BigInt(high) * POW32 + BigInt(low)
+    return BigInt(high) * POW32 + BigInt(low)
   }
 }
 
@@ -1227,7 +1227,12 @@ class VARIANT extends CONTAINER {
    *
    */
   eval () {
-    return this.elems[1].eval()
+    const value = this.elems[1].eval()
+    if (value === undefined) {
+      console.dir(this, { depth: 10 })
+      throw Error('stack')
+    }
+    return value
 /**
     return { 
       signature: this.elems[0].eval(),

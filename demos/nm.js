@@ -1,25 +1,15 @@
-const path = require('path')
+const NM = require('../src/nm')
 
-const DBus = require('../src/dbus')
+const nm = new NM()
+nm.on('error', err => console.log(err))
+nm.on('ready', () => {
+  nm.requestScan()
 
-const client = new DBus()
-
-client.on('connect', () => {
-  client.AddMatch({
-    type: 'signal',
-    sender: 'org.freedesktop.NetworkManager',
-    'path_namespace': '/org/freedesktop'
-  }, err => {
-    if (err) return err
-
-    client.GetManagedObjects('org.freedesktop.NetworkManager', '/org/freedesktop', 
-      (err, body) => {
-        if (err) return err
-
-        console.dir(body[0].eval(), { depth: 9 })
-
-      })
-  })
+  setTimeout(() => {
+    nm.addConnection('Naxian800', 'vpai1228', (err, res) => {
+      console.log(err, res)
+    })
+  }, 3000)
 })
 
-client.on('signal', signal => console.log('signal', signal))
+

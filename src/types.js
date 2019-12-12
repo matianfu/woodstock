@@ -18,6 +18,14 @@ const BIG = Buffer.from('B')[0]
 const POW32 = BigInt(Math.pow(2, 32))
 const POW64 = POW32 * POW32
 
+const print = buf => {
+  while (buf.length) {
+    console.log(buf.slice(0, 16))
+    buf = buf.slice(16)
+  }
+}
+
+
 /**
 This module defines all classes for DBus data types.
 
@@ -830,7 +838,9 @@ class OBJECT_PATH extends STRING {
 }
 
 /**
- * Signature (same as STRING except for type code and alignment)
+ * SIGNATURE has difference type code and alignment from STRING.
+ *
+ * SIGNATURE could be empty string.
  */
 class SIGNATURE extends STRING {
   /**
@@ -839,7 +849,7 @@ class SIGNATURE extends STRING {
   constructor (value) {
     super(value)
     if (Object.prototype.hasOwnProperty.call(this, 'value')) {
-      split(this.value)
+      this.value && split(this.value)
     }
   }
 
@@ -847,9 +857,12 @@ class SIGNATURE extends STRING {
     buf.writeUInt8(this.value.length, offset)
   }
 
+  /**
+   *
+   */
   unmarshal (buf, offset, le) {
     offset = super.unmarshal(buf, offset, le)
-    split(this.value)
+    this.value && split(this.value)
     return offset
   }
 }
@@ -1111,6 +1124,7 @@ class STRUCT extends CONTAINER {
     this.elems = []
     this.esigs.forEach(sig => {
       const elem = new TYPE(sig)
+
       offset = elem.unmarshal(buf, offset, le)
       this.elems.push(elem)
     })

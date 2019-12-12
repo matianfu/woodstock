@@ -1,24 +1,3 @@
-/**
-  _map:
-   { y: [Function: BYTE],
-     n: [Function: INT16],
-     q: [Function: UINT16],
-     i: [Function: INT32],
-     u: [Function: UINT32],
-     b: [Function: BOOLEAN],
-     h: [Function: UNIX_FD],
-     x: [Function: INT64],
-     t: [Function: UINT64],
-     d: [Function: DOUBLE],
-     s: [Function: STRING],
-     o: [Function: OBJECT_PATH],
-     g: [Function: SIGNATURE],
-     a: [Function: ARRAY],
-     '(': [Function: STRUCT],
-     '{': [Function: DICT_ENTRY],
-     v: [Function: VARIANT] } }
-*/
-
 const path = require('path')
 const expect = require('chai').expect
 
@@ -53,3 +32,4 @@ describe(path.basename(__filename), () => {
     done()
   })
 })
+

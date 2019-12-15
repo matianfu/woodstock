@@ -1,6 +1,8 @@
 const path = require('path')
 const EventEmitter = require('events')
 
+
+
 const uuid = require('uuid')
 
 const { BYTE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('./types')
@@ -8,6 +10,48 @@ const { BYTE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('./types')
 const DBus = require('./dbus')
 
 // https://cgit.freedesktop.org/NetworkManager/NetworkManager/tree/examples/python/dbus
+
+
+const describeEnums = (enums, flags) => 
+  Object.keys(enums).find(key => enums[key] === flags) || flags
+
+const describeBits = (enums, flags) => 
+  Object.keys(enums).reduce((arr, prop) => 
+    enums[prop] & flags ? [...arr, prop] : arr, [])
+
+// https://cgit.freedesktop.org/NetworkManager/NetworkManager/tree/libnm-core/nm-dbus-interface.h
+
+const NM80211ApFlags = {
+  NM_802_11_AP_SEC_NONE: 0x00000000,   
+  NM_802_11_AP_SEC_PAIR_WEP40: 0x00000001, 
+	NM_802_11_AP_FLAGS_WPS     : 0x00000002,
+	NM_802_11_AP_FLAGS_WPS_PBC : 0x00000004,
+	NM_802_11_AP_FLAGS_WPS_PIN : 0x00000008,
+}
+
+const NM80211ApSecurityFlags = {
+	NM_802_11_AP_SEC_NONE            : 0x00000000,
+	NM_802_11_AP_SEC_PAIR_WEP40      : 0x00000001,
+	NM_802_11_AP_SEC_PAIR_WEP104     : 0x00000002,
+	NM_802_11_AP_SEC_PAIR_TKIP       : 0x00000004,
+	NM_802_11_AP_SEC_PAIR_CCMP       : 0x00000008,
+	NM_802_11_AP_SEC_GROUP_WEP40     : 0x00000010,
+	NM_802_11_AP_SEC_GROUP_WEP104    : 0x00000020,
+	NM_802_11_AP_SEC_GROUP_TKIP      : 0x00000040,
+	NM_802_11_AP_SEC_GROUP_CCMP      : 0x00000080,
+	NM_802_11_AP_SEC_KEY_MGMT_PSK    : 0x00000100,
+	NM_802_11_AP_SEC_KEY_MGMT_802_1X : 0x00000200,
+	NM_802_11_AP_SEC_KEY_MGMT_SAE    : 0x00000400,
+	NM_802_11_AP_SEC_KEY_MGMT_OWE    : 0x00000800,
+}
+
+const NM80211Mode = {
+	NM_802_11_MODE_UNKNOWN : 0,
+	NM_802_11_MODE_ADHOC   : 1,
+	NM_802_11_MODE_INFRA   : 2,
+	NM_802_11_MODE_AP      : 3,
+	NM_802_11_MODE_MESH    : 4,
+}
 
 class NM extends EventEmitter {
   constructor () {
@@ -141,15 +185,21 @@ class NM extends EventEmitter {
     const node = this.shadow[paths[0]]
     const wireless = 'org.freedesktop.NetworkManager.Device.Wireless'
     const accesspoint = 'org.freedesktop.NetworkManager.AccessPoint'
-    const aps = node[wireless].AccessPoints.map(path => this.shadow[path])
+    const aps = node[wireless].AccessPoints.map(path => this.shadow[path][accesspoint])
 
-    console.log(node[wireless])
-    aps.forEach(ap => console.dir(ap))
+    console.log('======')
     aps.forEach(ap => {
-      console.dir(Object.assign({}, ap[accesspoint], {
-        Ssid: Buffer.from(ap[accesspoint].Ssid).toString()
-      }))
+      const o = Object.assign({}, ap, {
+        Flags: describeBits(NM80211ApFlags, ap.Flags),
+        WpaFlags: describeBits(NM80211ApSecurityFlags, ap.WpaFlags),
+        RsnFlags: describeBits(NM80211ApSecurityFlags, ap.RsnFlags),
+        Ssid: Buffer.from(ap.Ssid).toString('utf8'),
+        Mode: describeEnums(NM80211Mode, ap.Mode) 
+      })
+
+      if (o.Ssid !== 'Naxian800' && o.Ssid !== 'Naxian800-Guest') console.log(o)
     })
+    console.log('======')
 
     this.bus.methodCall({
       destination: 'org.freedesktop.NetworkManager',
@@ -163,6 +213,9 @@ class NM extends EventEmitter {
     })
   }
 
+  /**
+   * DBus connection is a collection of dictionaries.
+   */
   addConnection (ssid, passphrase, callback) {
     /**
      * s_con = dbus.Dictionary({
@@ -240,6 +293,22 @@ class NM extends EventEmitter {
       console.log(body[0])
       callback(null, body[0])
     })
+  }
+
+  ListConnections () {
+  }
+
+  ActivateConnection () {
+  }
+
+  RemoveConnection () {
+  }
+
+  /**
+   * return network manager state
+   */
+  nmstate () {
+    
   }
 }
 

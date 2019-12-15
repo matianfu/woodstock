@@ -1,6 +1,6 @@
 # Woodstock
 
-`woodstock` is a DBus client implementation using pure JavaScript.
+`woodstock` is a compact DBus client implementation using pure JavaScript. 
 
 # Toolchain
 

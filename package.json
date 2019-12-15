@@ -1,6 +1,6 @@
 {
-  "name": "system-dbus",
-  "version": "1.0.0",
+  "name": "woodstock",
+  "version": "0.1.0",
   "description": "Yet Another DBus Implementation",
   "main": "index.js",
   "directories": {
@@ -39,12 +39,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wisnuc/system-dbus.git"
+    "url": "git+https://github.com/matianfu/woodstock.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Tianfu Ma <matianfu@gmail.com>",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/wisnuc/system-dbus/issues"
+    "url": "https://github.com/matianfu/woodstock/issues"
   },
-  "homepage": "https://github.com/wisnuc/system-dbus#readme"
+  "homepage": "https://github.com/matianfu/woodstock#readme"
 }

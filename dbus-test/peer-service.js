@@ -33,14 +33,14 @@ describe(path.basename(__filename), () => {
     client.end()
   })
 
-  it('Ping should return nothing', done => 
+  it.skip('Ping should return nothing', done => 
     client.Ping(server.myName, (err, body) => {
       expect(err).to.equal(null)  
       expect(body).to.equal(undefined)
       done()
     }))
 
-  it('GetMachineId should return server.machineId', done =>
+  it.skip('GetMachineId should return server.machineId', done =>
     client.methodCall({
       destination: server.myName,
       path: '/',

@@ -6,6 +6,14 @@ const validateImpl = require('./implementation')
 const PropertiesImpl = require('./templates/org.freedesktop.DBus.Properties')
 const OmImpl = require('./templates/org.freedesktop.DBus.ObjectManager')
 
+
+/**
+ * A DBus method may returns `undefined` or a TYPE object. For debugging,
+ * the result could also be wrapped into a JavaScript object with debug options
+ *
+ * @typedef {undefined|TYPE|object} MethodResult
+ */
+
 /**
  * Node represents a DBus object with object path.
  * 
@@ -164,6 +172,79 @@ class Node {
   signal (m) {
     this.emit && this.emit(m)
   }
+
+
+  /**
+   * 
+   * @param {string} iface - interface name
+   * @param {strimg} member - method name
+   */
+  findMethod (iface, member) {
+    const impl = this.implementations.find(i => i.interface.name === iface)  
+    if (!impl) {
+      const e = new Error('interface not found')
+      e.name = 'org.freedesktop.DBus.Error.UnknownInterface'
+      throw e
+    }
+
+    const def = impl.interface.methods.find(def => def.name === member)
+    if (!def) {
+      const e = new Error('method not defined')
+      e.name = 'org.freedesktop.DBus.Error.UnknownMethod' 
+      throw e
+    }
+
+    if (typeof impl[member] !== 'function') {
+      const e = new Error('method not found')
+      e.name = 'org.freedesktop.DBus.Error.UnknownMethod'
+      throw e
+    }
+
+    const method = impl[member].bind(impl)
+
+    const isig = def.args
+      .filter(a => a.direction === 'in')
+      .map(a => a.type)
+      .join('')
+
+    const osig = def.args
+      .filter(a => a.direction === 'out')
+      .map(a => a.type)
+      .join('')
+
+    return { method, isig, osig }
+  }
+
+  /**
+   * Invokes method asynchronously
+   */
+  async invokeAsync (m) {
+    const { method, isig, osig } = this.findMethod(m.interface, m.member)
+    // TODO check signature
+
+    return method(m)
+  }
+
+  /**
+   * Invokes method synchronously. The invoked method must be a synchronous method.
+   * 
+   * @param {object} m
+   * @param {string} m.interface - interface name
+   * @param {string} m.member - member name
+   * @param {TYPE[]} m.body - arguments
+   * @returns {MethodResult} 
+   */
+  invoke (m) {
+    const { method, isig, osig } = this.findMethod(m.interface, m.member)
+
+
+    if (m.constructor.name === 'AsyncFunction') {
+      throw new Error('method is asynchronous')
+    }
+
+    // TODO check signature
+    return method(m)
+  } 
 }
 
 module.exports = Node

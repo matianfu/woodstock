@@ -22,41 +22,6 @@ const print = buf => {
 const ERR_UNKNOWN_OBJECT = 'org.freedesktop.DBus.Error.UnknownObject'
 
 /**
-  { le: true,
-    type: 'SIGNAL',
-    flags: { noReply: true },
-    version: 1,
-    serial: 5135,
-    path: '/fi/w1/wpa_supplicant1/Interfaces/11/BSSs/199',
-    interface: 'org.freedesktop.DBus.Properties',
-    member: 'PropertiesChanged',
-    signature: 'sa{sv}as',
-    sender: ':1.8',
-    body:
-     [ 'fi.w1.wpa_supplicant1.BSS', [ [ 'Age', [ 'u', 4 ] ] ], [] ],
-    bytesDecoded: 236 }
- * 
- */
-
-/**
-an example error
-{ type: 'ERROR',
-  flags: { noReply: true },
-  version: 1,
-  serial: 3,
-  destination: ':1.258',
-  errorName: 'org.freedesktop.DBus.Error.UnknownInterface',
-  replySerial: 2,
-  signature: 's',
-  sender: 'org.freedesktop.DBus',
-  body:
-   [ STRING {
-       value:
-        'org.freedesktop.DBus does not understand message GetManagedObjects' } ] }
-
-*/
-
-/**
  * DBus has a compact and versatile design to allow the user to
  * communicate with other dbus services as well as exposing custom
  * services to the bus.
@@ -145,6 +110,8 @@ class DBus extends EventEmitter {
   constructor (opts = {}) {
     super()
 
+    this.opts = opts
+
     /**
      *
      */
@@ -220,9 +187,10 @@ class DBus extends EventEmitter {
      *
      */
     this.connected = false
+
     this.on('connect', () => this.connected = true)
+    this.on('signal', s => this.relaySignal(s))
     this.connect((err, socket) => {})
-    this.on('signal', s => this.onSignal(s))
   }
 
   /**
@@ -257,7 +225,7 @@ class DBus extends EventEmitter {
           this.socket = socket
           auth = true
 
-          this.methodCall({
+          this.invoke({
             destination: 'org.freedesktop.DBus',
             path: '/org/freedesktop/DBus',
             interface: 'org.freedesktop.DBus',
@@ -268,7 +236,7 @@ class DBus extends EventEmitter {
               console.log(err)
             } else {
               this.myName = body[0].value
-              this.methodCall({
+              this.invoke({
                 destination: 'org.freedesktop.DBus',
                 path: '/org/freedesktop/DBus',
                 interface: 'org.freedesktop.DBus.Peer',
@@ -301,16 +269,13 @@ class DBus extends EventEmitter {
     socket.write(`\0AUTH EXTERNAL ${hex}\r\n`)
   }
 
-  // TODO too small?
-  handleData (data) {
-    this.data = Buffer.concat([this.data, data])
-    while (1) {
-      const m = decode(this.data)
-      if (!m) return
-      this.data = this.data.slice(m.bytesDecoded)
-      this.handleMessage(m)
-    }
+  /**
+   * TODO
+   */
+  end () {
+    this.socket.end()
   }
+
 
   /**
    * Low level send message to dbus
@@ -335,16 +300,16 @@ class DBus extends EventEmitter {
     return serial
   }
 
-  /**
-   * send a method call
-   */
-  methodCall (m, callback = () => {}) {
-    if (typeof m !== 'object') {
-      throw new TypeError('message not an object')
+  // TODO too small?
+  // TODO slice data in packet
+  handleData (data) {
+    this.data = Buffer.concat([this.data, data])
+    while (1) {
+      const m = decode(this.data)
+      if (!m) return
+      this.data = this.data.slice(m.bytesDecoded)
+      this.handleMessage(m)
     }
-
-    const serial = this.send(Object.assign({}, m, { type: 'METHOD_CALL' }))
-    this.callMap.set(serial, [m, callback])
   }
 
   /**
@@ -354,7 +319,13 @@ class DBus extends EventEmitter {
    */
   handleMessage (m) {
     if (m.type === 'METHOD_CALL') {
-      this.handleMethodCall(m)
+      this.invoke(m, (err, result) => {
+        if (err) {
+          this.errorReturn(m, err)
+        } else {
+          this.methodReturn(m, result)
+        }
+      })
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
       const pair = this.callMap.get(m.replySerial)
       if (pair) {
@@ -374,29 +345,6 @@ class DBus extends EventEmitter {
         if (m.type === 'METHOD_RETURN') {
           callback(null, m.body)
         } else {
-          // message: 
-          // { 
-          //   le: true,
-          //   type: 'ERROR',
-          //   flags: {},
-          //   version: 1,
-          //   serial: 4,
-          //   errorName: 'org.freedesktop.DBus.Error.AccessDenied',
-          //   replySerial: 4,
-          //   destination: ':1.671',
-          //   sender: ':1.670',
-          //   signature: 's',
-          //   body: [ STRING { value: 'internal error' } ],
-          //   bytesDecoded: 131 
-          // }
-          // 
-          // error: 
-          // {
-          //   message: 'internal error',
-          //   code: 'ERR_DBUS_ERROR',
-          //   name: 'org.freedesktop.DBus.Error.AccessDenied',
-          // }
-
           const msg = (m.body && m.body[0] instanceof STRING)
             ? m.body[0].value : 'dbus error'
           const err = new Error(msg)
@@ -418,12 +366,13 @@ class DBus extends EventEmitter {
     }
   }
 
+
   /**
    * Listens on 'signal' event. Sends internal signal to dbus
    * and dispatch dbus message to registered handlers
-   * @param {object} s - internal signal
+   * @param {object} s - signal
    */
-  onSignal (s) {
+  relaySignal (s) {
     if (s.sender) {
     } else {
       const m = {
@@ -444,6 +393,51 @@ class DBus extends EventEmitter {
   }
 
   /**
+   * Invokes a method on remote or local DBus object.
+   *
+   * For invoking method on remote object, callback must be provided.
+   * For invoking method on local object, if the method is synchronous, this function
+   * returns result synchronously.
+   *
+   * @param {object} m
+   * @param {string} m.destination - service name. 
+   * @param {string} m.path - object path.
+   * @param {string} m.interface - interface name
+   * @param {string} m.member - method name
+   * @param {string} m.signature -
+   * @param {TYPE[]} m.body - argument list, in TYPE format
+   * @param {function} callback - callback for remote or asynchronous methods.
+   */ 
+  invoke (m, callback) {
+    const unwrap = r => (r === undefined || r instanceof TYPE) ? r : r.result
+
+    if (!m.destination || m.destination === this.myName) {
+      const node = this.nodes.find(m.path) 
+      if (!node) {
+        const e = new Error('object not found')
+        e.name = 'org.freedesktop.DBus.Error.UnknownObject'
+        if (callback) {
+          return process.nextTick(() => callback(e))
+        } else {
+          throw e
+        }
+      }
+
+      if (callback) {
+        node.invokeAsync(m)
+          .then(result => callback(null, m.sender ? result : unwrap(result)))
+          .catch(e => callback(e))
+      } else {
+        return unwrap(node.invoke(m))
+      }
+    } else {
+      if (!callback) callback = () => {}
+      const serial = this.send(Object.assign({}, m, { type: 'METHOD_CALL' })) 
+      this.callMap.set(serial, [m, callback])
+    }
+  }
+
+  /**
    * Formats method call result to a METHOD_RETURN message
    *
    * If result is unwrapped, it is either undefined or a TYPE object.
@@ -457,9 +451,9 @@ class DBus extends EventEmitter {
    * @param {undefined|TYPE|object} result - unwrapped or wrapped result
    * @param {TYPE} [wrapped.result] - wrapped result
    * @param {boolean} [result.debug] - debug print
-   * @parma {boolean} [result.decode] - decode the encoded message again
+   * @param {boolean} [result.decode] - decode the encoded message again
    */
-  formatMethodResult (m, result) {
+  methodReturn (m, result) {
     const o = {
       type: 'METHOD_RETURN',
       flags: { noReply: true },
@@ -467,27 +461,31 @@ class DBus extends EventEmitter {
       replySerial: m.serial,
     } 
 
-    if (result === undefined) return o 
-    if (result instanceof TYPE) return Object.assign(o, {
-      signature: result.signature(),
-      body: [result]
-    })
+    if (result === undefined) {
+      this.send(o)
+      return
+    }
+
+    if (result instanceof TYPE) {
+      this.send(Object.assign(o, { signature: result.signature(), body: [result] }))
+      return
+    }
 
     if (typeof result === 'object') {
       if (result.result === undefined) {
-        return Object.assign({}, result, o, {
+        return this.send(Object.assign({}, result, o, {
           signature: undefined,
           body: undefined,
           result: undefined
-        }) 
+        }))
       }
 
       if (result.result instanceof TYPE) {
-        return Object.assign({}, result, o, {
+        return this.send(Object.assign({}, result, o, {
           signature: result.result.signature(),
           body: [result.result],
           result: undefined
-        })
+        }))
       }
     }
 
@@ -495,7 +493,8 @@ class DBus extends EventEmitter {
   }
 
   /**
-   *
+   * @param {object} m - original method invocation message
+   * @param {Error} e - error
    */
   errorReturn (m, e) {
     const r = {
@@ -517,73 +516,6 @@ class DBus extends EventEmitter {
     }
 
     this.send(r)
-  }
-
-  /**
-   * Invoke the 'Introspect' methods on standard 'Introspectable' interface
-   * for given destination and object path
-   *
-   * @param {string} destination - bus name
-   * @param {string} [object] - object path, defaults to '/'
-   * @param {function} callback - `(err, data) => {}`
-   */
-  introspect (destination, object, callback) {
-    if (typeof object === 'function') {
-      callback = object
-      object = '/'
-    }
-
-    const m = {
-      destination,
-      path: object,
-      interface: 'org.freedesktop.DBus.Introspectable',
-      member: 'Introspect'
-    }
-
-    this.methodCall(m, (err, body) => {
-      if (err) {
-        callback(err)
-      } else {
-        // TODO
-        const xml = body[0].value
-        callback(null, xml)
-
-        const parsed = parseXml(xml)
-        // console.log(JSON.stringify(parsed, null, '  '))
-      }
-    })
-  }
-
-  /**
-   * Handle an incoming METHOD_CALL
-   *
-   * - find object by path
-   * - check whether the object has the interface
-   * - check whether the interface has the member (method)
-   * - verify the input signature
-   * - retrieve the implementation and invoke it
-   * - reply an METHOD_RETURN or an ERROR
-   */
-  handleMethodCall (m) {
-    // console.log(this.role || this.myName, 'handleMethodCall', m)
-    const node = this.nodes.find(m.path)
-    if (!node) {
-      const e = new Error(`object not found`)
-      e.name = 'org.freedesktop.DBus.Error.UnknownObject'
-      this.errorReturn(m, e)
-    } else {
-      // Method returns undefined, TYPE,
-      // or object { result, signature, ... }
-      node.Method(m)
-        .then(result => {
-          // TODO debug console.log('method call result', result)
-          this.send(this.formatMethodResult(m, result))
-        })
-        .catch(e => {
-          // TODO debug console.log('method call error', e)
-          this.errorReturn(m, e)
-        })
-    }
   }
 
   /**
@@ -640,7 +572,6 @@ class DBus extends EventEmitter {
    * }
    * ```
    * 
-   * 
    * @param {object} opts 
    * @param {string} opts.path - object path
    * @param {Array<string|object>} - an array of implementations
@@ -666,6 +597,7 @@ class DBus extends EventEmitter {
     this.emit('nodeRemoved', node)
   }
 
+
   /**
    * Add a match rules.
    *
@@ -690,9 +622,7 @@ class DBus extends EventEmitter {
       throw new TypeError('rule not an object')
     }
 
-    const keys = [
-      'type', 'sender', 'interface', 'member', 'path', 'pathNamespace'
-    ]
+    const keys = ['type', 'sender', 'interface', 'member', 'path', 'path_namespace']
 
     const s = keys
       .reduce((arr, key) => rule[key] 
@@ -700,7 +630,7 @@ class DBus extends EventEmitter {
         : arr, [])
       .join(',')
 
-    this.methodCall({
+    this.invoke({
       destination: 'org.freedesktop.DBus',
       path: '/org/freedesktop/DBus',
       interface: 'org.freedesktop.DBus',
@@ -710,7 +640,6 @@ class DBus extends EventEmitter {
     }, err => callback(err))
   }
   
-
   /**
    * Invokes org.freedesktop.DBus.Peer.Ping
    *
@@ -724,7 +653,7 @@ class DBus extends EventEmitter {
       objectPath = '/'
     }
 
-    this.methodCall({
+    this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Peer',
@@ -745,7 +674,7 @@ class DBus extends EventEmitter {
       objectPath = '/'
     }
 
-    this.methodCall({
+    this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Peer',
@@ -763,7 +692,7 @@ class DBus extends EventEmitter {
    * org.freedesktop.DBus.Properties.Get
    */
   GetProp (destination, objectPath, interfaceName, propName, callback) {
-    this.methodCall({
+    this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Properties',
@@ -780,7 +709,7 @@ class DBus extends EventEmitter {
    * org.freedesktop.DBus.Properties.GetAll
    */
   GetAllProps (destination, objectPath, interfaceName, callback) {
-    this.methodCall({
+    this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Properties',
@@ -794,7 +723,7 @@ class DBus extends EventEmitter {
    * org.freedesktop.DBus.Properties.Set
    */
   SetProp (destination, objectPath, interfaceName, propName, value, callback) {
-    this.methodCall({
+    this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Properties',
@@ -812,7 +741,7 @@ class DBus extends EventEmitter {
    * org.freedesktop.DBus.ObjectManager.GetManagedObjects
    */
   GetManagedObjects (destination, objectPath, callback) {
-    this.methodCall({
+    this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.ObjectManager',
@@ -820,47 +749,85 @@ class DBus extends EventEmitter {
     }, callback)
   }
 
-  /**
-   * org.freedesktop.DBus.Introspectable.Introspect
-   */
-  Introspect () {
-  }
-
-  /**
-   *
-   */
-  end () {
-    this.socket.end()
-  }
-
-  /**
-   *
-   */
-  wpaProps (callback) {
-    const service = 'fi.w1.wpa_supplicant1'
-    const objectPath = '/fi/w1/wpa_supplicant1'
-    const iface =  'fi.w1.wpa_supplicant1'
-    this.GetAllProps(service, objectPath, iface, (err, body) => {
-      if (err) return callback(err)
-
-      const arr = body[0].elems.map(de => de.elems)
-
-      /**
-       * DebugLevel "s"
-       * DebugTimestamp "b"
-       * DebugShowKeys "b"
-       * Interfaces "ao"
-       * EapMethods "as"
-       * Capabilities "as"
-       * WFDIEs "ay"
-       */
-      const obj = {}
-
-      arr.map(([k, v]) => (obj[k.value] = v.elems[1].eval()))
-      
-      callback(null, obj)  
-    })
-  }
 }
 
 module.exports = DBus
+
+/**
+ * { le: true,
+ *   type: 'METHOD_CALL',
+ *   flags: {},
+ *   version: 1,
+ *   serial: 4,
+ *   path: '/',
+ *   interface: 'org.freedesktop.DBus.Properties',
+ *   member: 'Set',
+ *   destination: ':1.1139',
+ *   sender: ':1.1140',
+ *   signature: 'ssv',
+ *   body:
+ *    [ STRING { value: 'com.example.readwrite' },
+ *      STRING { value: 'ReadWrite' },
+ *      VARIANT { sig: 'v', elems: [Array], esigs: [Array] } ],
+ *   bytesDecoded: 192 }
+ */
+
+/**
+  { le: true,
+    type: 'SIGNAL',
+    flags: { noReply: true },
+    version: 1,
+    serial: 5135,
+    path: '/fi/w1/wpa_supplicant1/Interfaces/11/BSSs/199',
+    interface: 'org.freedesktop.DBus.Properties',
+    member: 'PropertiesChanged',
+    signature: 'sa{sv}as',
+    sender: ':1.8',
+    body:
+     [ 'fi.w1.wpa_supplicant1.BSS', [ [ 'Age', [ 'u', 4 ] ] ], [] ],
+    bytesDecoded: 236 }
+ * 
+ */
+
+/**
+an example error
+{ type: 'ERROR',
+  flags: { noReply: true },
+  version: 1,
+  serial: 3,
+  destination: ':1.258',
+  errorName: 'org.freedesktop.DBus.Error.UnknownInterface',
+  replySerial: 2,
+  signature: 's',
+  sender: 'org.freedesktop.DBus',
+  body:
+   [ STRING {
+       value:
+        'org.freedesktop.DBus does not understand message GetManagedObjects' } ] }
+
+*/
+
+// message: 
+// { 
+//   le: true,
+//   type: 'ERROR',
+//   flags: {},
+//   version: 1,
+//   serial: 4,
+//   errorName: 'org.freedesktop.DBus.Error.AccessDenied',
+//   replySerial: 4,
+//   destination: ':1.671',
+//   sender: ':1.670',
+//   signature: 's',
+//   body: [ STRING { value: 'internal error' } ],
+//   bytesDecoded: 131 
+// }
+// 
+// error: 
+// {
+//   message: 'internal error',
+//   code: 'ERR_DBUS_ERROR',
+//   name: 'org.freedesktop.DBus.Error.AccessDenied',
+// }
+
+

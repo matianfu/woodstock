@@ -19,28 +19,28 @@ describe(path.basename(__filename), () => {
 
   afterEach(() => client.end())
 
-  it(`Ping ${DEST} should succeed`, done => {
+  it.skip(`Ping ${DEST} should succeed`, done => {
     client.Ping(DEST, err => {
       expect(err).to.equal(null)
       done()
     })
   })
 
-  it(`Ping ${DEST} with ${ROOT} should succeed`, done => {
+  it.skip(`Ping ${DEST} with ${ROOT} should succeed`, done => {
     client.Ping(DEST, ROOT, err => {
       expect(err).to.equal(null)
       done()
     })
   })
 
-  it(`Ping ${DEST} with ${PATH} should succeed`, done => {
+  it.skip(`Ping ${DEST} with ${PATH} should succeed`, done => {
     client.Ping(DEST, PATH, err => {
       expect(err).to.equal(null)
       done()
     })
   })
 
-  it(`GetMachineId ${DEST} should succeed`, done => {
+  it.skip(`GetMachineId ${DEST} should succeed`, done => {
     client.GetMachineId(DEST, (err, machineId) => {
       expect(err).to.equal(null)
       expect(machineId).to.equal(client.machineId)
@@ -48,14 +48,14 @@ describe(path.basename(__filename), () => {
     })
   })
 
-  it(`GetMachineId ${DEST} with ${ROOT} should succeed`, done =>
+  it.skip(`GetMachineId ${DEST} with ${ROOT} should succeed`, done =>
     client.GetMachineId(DEST, ROOT, (err, machineId) => {
       expect(err).to.equal(null)
       expect(machineId).to.equal(client.machineId)
       done()
     }))
 
-  it(`GetMachineId ${DEST} with ${PATH} should succeed`, done =>
+  it.skip(`GetMachineId ${DEST} with ${PATH} should succeed`, done =>
     client.GetMachineId(DEST, PATH, (err, machineId) => {
       expect(err).to.equal(null)
       expect(machineId).to.equal(client.machineId)

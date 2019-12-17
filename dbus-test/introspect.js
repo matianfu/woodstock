@@ -12,10 +12,10 @@ describe(path.basename(__filename), () => {
   beforeEach(() => bus = new DBus())
   afterEach(() => bus.end())
 
-  it('should connect to dbus successfully', done =>
+  it.skip('should connect to dbus successfully', done =>
     bus.on('connect', () => done()))
 
-  it('Ping on Peer of org.freedesktop.DBus', done =>
+  it.skip('Ping on Peer of org.freedesktop.DBus', done =>
     bus.on('connect', () => {
       bus.methodCall({
         destination: 'org.freedesktop.DBus',
@@ -25,7 +25,7 @@ describe(path.basename(__filename), () => {
       }, done)
     }))
 
-  it('GetMachineId on Peer of org.freedesktop.DBus', done =>
+  it.skip('GetMachineId on Peer of org.freedesktop.DBus', done =>
     bus.on('connect', () => {
       bus.methodCall({
         destination: 'org.freedesktop.DBus',

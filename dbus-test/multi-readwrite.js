@@ -52,7 +52,7 @@ describe(path.basename(__filename) +
     client.end()
   })
 
-  it('empty dict if no children', done => {
+  it.skip('empty dict if no children', done => {
     client.GetManagedObjects(server.myName, '/', (err, body) => {
       expect(err).to.equal(null)
       expect(body).to.deep.equal([new ARRAY('a{oa{sa{sv}}}')])
@@ -60,7 +60,7 @@ describe(path.basename(__filename) +
     })
   })
 
-  it('server add /hello should emit internal signal', done => {
+  it.skip('server add /hello should emit internal signal', done => {
     server.on('signal', s => {
       expect(s.origin).to.equal(null)
       expect(s.path).to.equal('/')
@@ -103,7 +103,7 @@ describe(path.basename(__filename) +
     })
   })
 
-  it('server add /hello should emit DBus signal', done => {
+  it.skip('server add /hello should emit DBus signal', done => {
     client.AddMatch({
       type: 'signal',
       sender: server.myName,

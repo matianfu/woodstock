@@ -55,7 +55,9 @@ const validate = (iface, impl) => {
     if (p === undefined) {
       if (!optional) throw new Error(`property ${name} not defined`)
     } else if (!(p instanceof TYPE)) {
-      throw new TypeError(`property ${name} not a TYPE object`)
+      // throw new TypeError(`property ${name} not a TYPE object`)
+      // Convert to TYPE
+      impl[name] = new TYPE(type, p)
     } else if (p.signature() !== type) {
       throw new TypeError(`property ${name} type mismatch`)
     }

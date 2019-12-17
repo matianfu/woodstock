@@ -8,12 +8,7 @@
     "test": "test"
   },
   "dependencies": {
-    "debug": "^4.1.1",
-    "long": "^4.0.0",
-    "put": "^0.0.6",
-    "safe-buffer": "^5.2.0",
-    "uuid": "^3.3.3",
-    "xml2js": "^0.4.22"
+    "debug": "^4.1.1"
   },
   "devDependencies": {
     "chai": "^4.2.0",

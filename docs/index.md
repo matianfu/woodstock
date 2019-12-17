@@ -1,6 +1,78 @@
-# DBUS
+# Woodstock
 
-DBus is a message bus for Linux system.
+`woodstock` is a lightweight and compact DBus library.
+
+It allows the user program to access system services, such as NetworkManager, via DBus. 
+
+Sometimes, the user program may also need to provide a simple service via DBus. For example, Bluez requires the client program to register its own DBus objects to implement BLE advertisement or GATT services. `woodstock` fits this requirement easily.
+
+`woodstock` is not intended to be a fully-fledged DBus library, providing all APIs from `org.freedesktop.DBus`, or allowing the user program to implment a complex service which cannot be represented by a value store.
+
+The following interfaces are supported:
+
+- `org.freedesktop.DBus.Peer`
+- `org.freedesktop.DBus.Properties`
+- `org.freedesktop.DBus.ObjectManager`
+
+`org.freedesktop.DBus.Introspectable` is not supported yet. But it could be supported if somebody requires.
+
+# DBus
+
+`DBus` class is provided by `src/dbus.js`. It is the single class the user program should be interested with.
+
+For accessing system services, the following methods are useful:
+
+- `methodCall`, invoking a method on remote DBus object;
+- `addMatch`, register signals from remote DBus object;
+- `on('signal', () => {})`, register a handler for signals;
+
+For providing DBus services, the user program create DBus object via `addNode` methods.
+
+`DBus` maintains a list of DBus objects internally. These object are mentioned as **local** DBus objects.
+
+# Types
+
+DBus is a binary protocol which defines its own data types.
+
+# Message Format
+
+All internal functions pass messages as arguments.
+
+
+
+Invoked by remote DBus service or clients
+
+
+M -> Set -> Returned Message
+         -> PropertiesChanged
+
+
+M -> Write -> Set -> Returned Message
+                  -> PropertiesChanged
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+system dbus <-- unix socket --> woodstock <-- 
+```
+
+DBUS is a binary protocol with its own data types. `woodstock` implements all DBus data types as JavaScript classes. 
+
 
 A DBus client program could be a user or a provider, or both.
 
@@ -87,4 +159,23 @@ ObjectManager.InterfacesRemoved (
 ## `org.freedesktop.DBus`
 
 This is a special interface with several methods and signals for operating or monitoring the whole bus.
+
+# com.example.readwrite
+
+This is a fictional interface used for testing.
+
+The interface has two properties:
+
+- `Read` property is a read-only string.
+- `ReadWrite` property is a read-write string.
+
+The interface has one method:
+
+- `Update(name, value)`, `name` could be `Read` or `ReadWrite`, and `value` is a string.
+
+This interface is provided for testing:
+
+1. local and remote access to properties. This is acturally a test on `org.freedesktop.DBus.Properties` interface.
+2. local and remote access to `Update` method.
+3. negative testing is emphasized.
 

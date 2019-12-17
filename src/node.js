@@ -113,6 +113,7 @@ class Node {
    * @param {string} [m.signature] - argument types
    * @param {TYPE[]} [m.body] - arguments
    */
+/**
   async Method (m) {
     const impl = this.implementations.find(i => i.interface.name === m.interface)
     if (!impl) {
@@ -168,6 +169,7 @@ class Node {
       return result
     }
   }
+*/
 
   signal (m) {
     this.emit && this.emit(m)
@@ -220,7 +222,16 @@ class Node {
    */
   async invokeAsync (m) {
     const { method, isig, osig } = this.findMethod(m.interface, m.member)
-    // TODO check signature
+
+    const body = m.body || []
+    const signature = body.map(arg => arg.signature()).join('')
+
+    if (signature !== isig) {
+      const msg = `signature mismatch, required: "${isig}", provided: "${signature}"`
+      const e = new Error(msg)
+      e.name = 'org.freedesktop.DBus.Error.InvalidSignature'
+      throw e
+    }
 
     return method(m)
   }
@@ -237,6 +248,15 @@ class Node {
   invoke (m) {
     const { method, isig, osig } = this.findMethod(m.interface, m.member)
 
+    const body = m.body || []
+    const signature = body.map(arg => arg.signature()).join('')
+
+    if (signature !== isig) {
+      const msg = `signature mismatch, required: "${isig}", provided: "${signature}"`
+      const e = new Error(msg)
+      e.name = 'org.freedesktop.DBus.Error.InvalidSignature'
+      throw e
+    }
 
     if (m.constructor.name === 'AsyncFunction') {
       throw new Error('method is asynchronous')

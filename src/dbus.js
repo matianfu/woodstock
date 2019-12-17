@@ -4,7 +4,6 @@ const net = require('net')
 
 const debug = require('debug')('dbus-driver')
 
-const parseXml = require('./parse-xml')
 const { TYPE, STRING, VARIANT } = require('./types')
 const { encode, decode } = require('./wire')
 const normalizeInterface = require('./interface')
@@ -373,8 +372,7 @@ class DBus extends EventEmitter {
    * @param {object} s - signal
    */
   relaySignal (s) {
-    if (s.sender) {
-    } else {
+    if (!s.sender || s.sender === this.myName) {
       const m = {
         type: 'SIGNAL',
         flags: { noReply: true },
@@ -411,7 +409,10 @@ class DBus extends EventEmitter {
   invoke (m, callback) {
     const unwrap = r => (r === undefined || r instanceof TYPE) ? r : r.result
 
-    if (!m.destination || m.destination === this.myName) {
+    if (!m.destination) m.destination = this.myName
+    if (!m.sender) m.sender = this.myName
+
+    if (m.destination === this.myName) {
       const node = this.nodes.find(m.path) 
       if (!node) {
         const e = new Error('object not found')
@@ -489,7 +490,7 @@ class DBus extends EventEmitter {
       }
     }
 
-    throw ''
+    throw new Error('invalid method result')
   }
 
   /**
@@ -533,7 +534,7 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * Adds an implementation TODO rename to addTemplate
+   * Adds an implementation template
    */
   addTemplate (implementation) {
     if (typeof implementation !== 'object' || !implementation) {
@@ -579,9 +580,8 @@ class DBus extends EventEmitter {
   addNode ({ path, implementations }) {
     const node = new Node(implementations, this.interfaces, this.templates)
     this.nodes.add(path, node)
-    Object.defineProperty(node, 'machineId', { 
-      get: () => this.machineId 
-    })
+    Object.defineProperty(node, 'machineId', { get: () => this.machineId })
+    Object.defineProperty(node, 'myName', { get: () => this.myName })
     node.emit = m => this.emit('signal', m)
   }
 
@@ -689,10 +689,16 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * org.freedesktop.DBus.Properties.Get
+   * Implements org.freedesktop.DBus.Properties.Get
+   * 
+   * @param {string} destination
+   * @param {string} objectPath
+   * @param {string} interfacename
+   * @param {string} propName
+   * @param {function} [callback]
    */
   GetProp (destination, objectPath, interfaceName, propName, callback) {
-    this.invoke({
+    return this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Properties',
@@ -706,10 +712,15 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * org.freedesktop.DBus.Properties.GetAll
+   * Implements org.freedesktop.DBus.Properties.GetAll
+   * 
+   * @param {string} [destination]
+   * @param {string} objectPath
+   * @param {string} interfacename
+   * @parma {function} [callback]
    */
   GetAllProps (destination, objectPath, interfaceName, callback) {
-    this.invoke({
+    return this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Properties',
@@ -720,10 +731,10 @@ class DBus extends EventEmitter {
   }
 
   /**
-   * org.freedesktop.DBus.Properties.Set
+   * Implements org.freedesktop.DBus.Properties.Set
    */
   SetProp (destination, objectPath, interfaceName, propName, value, callback) {
-    this.invoke({
+    return this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Properties',
@@ -741,7 +752,7 @@ class DBus extends EventEmitter {
    * org.freedesktop.DBus.ObjectManager.GetManagedObjects
    */
   GetManagedObjects (destination, objectPath, callback) {
-    this.invoke({
+    return this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.ObjectManager',

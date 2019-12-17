@@ -13,7 +13,7 @@ describe(path.basename(__filename) + ', local invoke', () => {
   let server
 
   beforeEach(done => {
-    server = new DBus()
+    server = new DBus({ role: 'server' })
     server.addInterface(Properties)
     server.addInterface(ReadWrite)
     server.addTemplate(PropertiesImpl)
@@ -359,7 +359,7 @@ describe(path.basename(__filename) +
 
   // set up client and server
   beforeEach(done => {
-    server = new DBus()
+    server = new DBus({ role: 'server' })
     server.addInterface(Properties)
     server.addInterface(ReadWrite)
     server.addTemplate(PropertiesImpl)
@@ -381,7 +381,7 @@ describe(path.basename(__filename) +
       if (client.connected) done()
     })
 
-    client = new DBus()
+    client = new DBus({ role: 'client' })
     client.on('connect', () => {
       if (server.connected) done()
     })
@@ -491,10 +491,10 @@ describe(path.basename(__filename) +
 
   it('Set ReadWrite to "bar" should emit signal on server', done => {
     client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-      new STRING('bar'), (err, body) => {})
+      new STRING('bar'), (err, body) => { })
 
     server.on('signal', s => {
-      expect(s.origin.sender).to.equal(client.myName)
+      expect(s.reason).to.equal(client.myName)
       expect(s.path).to.equal('/')
       expect(s.interface).to.equal('org.freedesktop.DBus.Properties')
       expect(s.member).to.equal('PropertiesChanged')
@@ -523,7 +523,9 @@ describe(path.basename(__filename) +
       if (err) return done(err)
 
       client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-        new STRING('bar'), (err, body) => {})
+        new STRING('bar'), (err, body) => { 
+          // console.log(err || body)
+        })
 
       client.on('signal', s => {
         expect(s.sender).to.equal(server.myName)

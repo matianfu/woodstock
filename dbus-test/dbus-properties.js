@@ -98,7 +98,7 @@ describe(path.basename(__filename) + ', local invoke', () => {
         path: '/',
         interface: 'org.freedesktop.DBus.Properties',
         member: 'PropertiesChanged',
-        sender: server.myName,
+        reason: server.myName,
         body: [
           new STRING('com.example.readwrite'),
           new ARRAY([

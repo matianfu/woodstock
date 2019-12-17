@@ -96,8 +96,8 @@ module.exports = {
     invalidatedProperties = [],
     m = {}
   ) {
-    this.node.signal({
-      sender: m.sender,
+    const s = {
+      reason: m.sender,
       path: this.node.path,
       interface: 'org.freedesktop.DBus.Properties',
       member: 'PropertiesChanged',
@@ -110,6 +110,8 @@ module.exports = {
           ]))),
         new ARRAY('as', invalidatedProperties.map(name => new STRING(name)))
       ],
-    })
+    }
+
+    this.node.signal(s)
   }
 }

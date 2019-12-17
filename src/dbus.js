@@ -372,7 +372,7 @@ class DBus extends EventEmitter {
    * @param {object} s - signal
    */
   relaySignal (s) {
-    if (!s.sender || s.sender === this.myName) {
+    if (!s.sender) {
       const m = {
         type: 'SIGNAL',
         flags: { noReply: true },

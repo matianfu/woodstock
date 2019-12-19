@@ -1,5 +1,5 @@
 /**
- * Defined in DBus Specification
+ * org.freedesktop.DBus.ObjectManager is defined in DBus Specification
  *
  * ```
  * org.freedesktop.DBus.ObjectManager.GetManagedObjects (
@@ -12,6 +12,8 @@
  *     OBJPATH object_path,
  *     ARRAY<STRING> interfaces);
  * ```
+ * 
+ * @module OmInterface
  */
 module.exports = {
   name: 'org.freedesktop.DBus.ObjectManager',

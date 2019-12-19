@@ -1,11 +1,8 @@
 /**
  * This is a fictional interface for testing.
  *
- * The interface defines two properties and one method.
- * 
- * @module "com.example.readwrite"
+ * @module ReadWriteUpdateInterface
  */
-
 module.exports = {
   name: 'com.example.readwrite',
   methods: [

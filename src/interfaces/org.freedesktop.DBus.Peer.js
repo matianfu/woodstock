@@ -1,3 +1,8 @@
+/**
+ * `org.freedesktop.DBus.Peer` interface is defined in DBus specification
+ *
+ * @module PeerInterface
+ */
 module.exports = {
   name: 'org.freedesktop.DBus.Peer',
   methods: [

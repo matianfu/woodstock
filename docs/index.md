@@ -34,21 +34,162 @@ For providing DBus services, the user program create DBus object via `addNode` m
 
 DBus is a binary protocol which defines its own data types.
 
+# Local DBus Object
+
+# Message Flow
+
+```
+No  Remote                  LOCAL                   DBus                    User
+1   |                       |                       | <-- invoke (remote) - |
+2   | <-- METHOD_CALL ----- +---------------------- |                       |
+3   | --- METHOD_RETURN or ERROR -----------------> |                       |
+4   |                       |                       | --- err/result -----> |
+    |                       |                       |                       |
+5   | --- SIGNAL -----------+---------------------> | --------------------> |
+    |                       |                       |                       |
+6   | --- METHOD_CALL ------+---------------------> |                       |
+7   |                       | <-- invoke ---------- |                       |
+8   |                       | --- err/result -----> |                       |
+9   | <-- METHOD_RETURN or ERROR ------------------ |                       |
+    |                       |                       |                       |
+10  |                       |                       | <-- invoke (local) -- |
+11  |                       | <-- invoke ---------- |                       |
+12  |                       | --- err/result -----> |                       |
+13  |                       |                       | --- err/result -----> |
+    |                       |                       |                       |
+14  |                       | --- signal ---------> | --------------------> |
+15  | <-- SIGNAL -----------+---- (relay) --------- |                       |
+```
+
 # Message Format
 
-All internal functions pass messages as arguments.
+The following table listed all possible properties for a message object:
+
+The last two properties, `bytesDecoded` and `initiator` are not defined in DBus specification.
+
+|property       |type       | CALL |RETURN|ERROR |SIGNAL|comment|
+|---------------|-----------|------|------|------|------|-------|
+|le             |boolean    |Y     |Y     |Y     |Y     |
+|type           |string     |Y     |Y     |Y     |Y     |
+|flags          |object     |Y     |Y     |Y     |Y     |
+|version        |number     |Y     |Y     |Y     |Y     |
+|serial         |number     |Y     |Y     |Y     |Y     |
+|path           |string     |Y     |      |      |Y     |
+|interface      |string     |Y     |      |      |Y     |
+|member         |string     |Y     |      |      |Y     |
+|errorName      |string     |      |      |Y     |      |
+|replySerial    |number     |      |Y     |Y     |      |
+|destination    |string     |Y     |Y     |Y     |      |
+|sender         |string     |Y     |Y     |Y     |Y     |
+|signature      |string     |O     |O     |Y     |O     |
+|body           |TYPE[]     |O     |O     |Y     |O     |
+|
+|bytesDecoded   |number     |Y     |Y     |Y     |Y     |unmarshalled mesage
+|initiator      |string     |      |      |      |Y     |signal from local DBus object
+
+All properties marked as 'Y' is defined in DBus specification, which means:
+1. they are provided in message unmarshalled from socket data
+2. they must be provided in message object before marshalling and sending over the socket
 
 
 
-Invoked by remote DBus service or clients
+All properties marked as `Y` is required for marshalling a message to send, or is present in a message unmarshalled from socket data. In DBus specification, 
+
+`DBus` class provides an `invoke` function to invoke a method on remote object. This function requires user to provide `path`, `interface`, `member`, `destination`, and `signature`/`body` pair optionally. Other properties are filled by `invoke`, `send` or `encode` method internally.
 
 
-M -> Set -> Returned Message
-         -> PropertiesChanged
 
 
-M -> Write -> Set -> Returned Message
-                  -> PropertiesChanged
+
+Invoke a remote method
+Local method invoked by remote client or service
+
+The following functions provided by `DBus` class requires 
+- invoke
+- errorReturn
+- methodReturn
+
+
+
+`bytesDecoded` is a property attached in unmarshalling, mainly for debug usage. `initator` is a property attached to signals emitted from local DBus object.
+
+When only local DBus object is concerned, only properties with bold typeface is 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+|||unmarshalled|send|invoke (api)|
+|-|-|-|-|-|
+|le|boolean|&#10003;|
+|type|string|&#10003;|&#10003;
+|flags|object|&#10003;
+|version|number|&#10003;
+|serial|number|&#10003;
+|path|string|&#10003;|&#10003;
+|interface|string|&#10003;|&#10003;
+|member|string|&#10003;|&#10003;
+|destination|string|&#10003;|&#10003;
+|sender|string|&#10003;
+|signature|string|&#10003;|optional
+|body|Array of TYPE|&#10003;|optional
+|bytesDecode|number|&#10003;
+|initiator|string|
+
+All internal functions pass messages as arguments, including the user-provided interface implementation.
+
+A message may be generated from methods or signals:
+
+For methods:
+
+1. user invokes method on remote DBus object (api)
+2. user invokes method on local DBus object (api)
+3. remote DBus client/service invokes method on local DBus object (unmarshalled)
+
+All invocations use `invoke()` method on DBus class as the entry point. All invocations are replied with a result or an error.
+
+case 1:
+case 2:
+case 3:
+
+For Signals:
+
+1. remote DBus objects may send signals. (unmarshalled)
+2. local DBus objects possibly emit signals when methods are invoked either by user or by remote DBus client/service, or by internal method such as `addNode` or `removeNode`, such a signal is firstly emitted by DBus instance to user, then broadcasted to DBus.
+
+case 1: signals has a sender other than undefined, empty string, or local name (`myName`).
+
+The local DBus object is better treated as a passive state store. It is updated either by remote service or by local user program. In this way, it is much simpler to implement a local service, such as GATT service in BLE.
+
+To differentiate whether a state is updated by remote object or local user program, we need a separate property, named `initiator`, in signal message. Signals initiated by remote service, either by Set method or by other method which eventually triggers a Set operation, has the `initiator` set to the remote service identifier, aka, the `sender` prop of the original METHOD_CALL message. If the updated is triggered by a method invocation from local user program, the sender should be undefined, null, empty string, or a string equals to `myName`.
+
+If multiple method call is cascaded, for example: a remote invocation takes on 'Write' method first, the message has a sender property set to remote service name, then 'Write' may invoke the Set method by constructing a new message, in this message, the sender property should be duplicated. And finally, when the signal is triggered, such a message is passed to signal function. It is the signal function that generates the initiator message from the sender property.
+
+
+
+
+
+
+
+
+
+
 
 
 

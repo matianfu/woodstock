@@ -32,7 +32,7 @@ describe(path.basename(__filename) + ', local invoke', () => {
     })
 
     server.on('connect', () => client.connected && done())
-    
+
     client = new DBus()
     client.on('connect', () => server.connected && done())
   })
@@ -42,53 +42,93 @@ describe(path.basename(__filename) + ', local invoke', () => {
     client.end()
   })
 
-  it('Get Read (sync) should succeed', () => 
-    expect(server.GetProp(null, '/', 'com.example.readwrite', 'Read'))
-      .to.deep.equal(new VARIANT(new STRING('hello'))))
+  it('Get Read (sync) should succeed', () =>
+    expect(server.Get({
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Read'
+    })).to.deep.equal(new VARIANT(new STRING('hello'))))
 
-  it('Get Read (async) should succeed', done => 
-    server.GetProp(null, '/', 'com.example.readwrite', 'Read', (err, result) => {
+  it('Get Read (async) should succeed', done =>
+    server.Get({
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Read'
+    }, (err, result) => {
       expect(err).to.equal(null)
       expect(result).to.deep.equal(new VARIANT(new STRING('hello')))
       done()
     }))
 
   it('Get Read (sync) from bad interface should throw UnknownInterface', () =>
-    expect(() => server.GetProp(null, '/', 'com.example.foo', 'Read'))
-      .to.throw(Error).with
-        .property('name', 'org.freedesktop.DBus.Error.UnknownInterface'))
+    expect(() => server.Get({
+      path: '/',
+      interfaceName: 'com.example.foo',
+      propertyName: 'Read'
+    })).to.throw(Error).with
+      .property('name', 'org.freedesktop.DBus.Error.UnknownInterface'))
 
-  it('Get Read (async) from bad interface should error UnknownInterface', done => 
-    server.GetProp(null, '/', 'com.example.foo', 'Read', (err, result) => { 
+  it('Get Read (async) from bad interface should error UnknownInterface', done =>
+    server.Get({
+      path: '/',
+      interfaceName: 'com.example.foo',
+      propertyName: 'Read'
+    }, (err, result) => {
       expect(err).to.be.an('Error').with
         .property('name', 'org.freedesktop.DBus.Error.UnknownInterface')
       done()
     }))
 
   it('Get Foo (sync) should throw UnknownProperty', () =>
-    expect(() => server.GetProp(null, '/', 'com.example.readwrite', 'Foo'))
-      .to.throw(Error).with
-        .property('name', 'org.freedesktop.DBus.Error.UnknownProperty'))
+    expect(() => server.Get({
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Foo'
+    })).to.throw(Error)
+      .with.property('name', 'org.freedesktop.DBus.Error.UnknownProperty'))
 
-  it('Get Foo (async) should error UnknownProperty', done => 
-    server.GetProp(null, '/', 'com.example.readwrite', 'Foo', (err, result) => { 
-      expect(err).to.be.an('Error').with
-        .property('name', 'org.freedesktop.DBus.Error.UnknownProperty')
+  it('Get Foo (async) should error UnknownProperty', done =>
+    server.Get({
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Foo'
+    }, (err, result) => {
+      expect(err).to.be.an('Error')
+        .with.property('name', 'org.freedesktop.DBus.Error.UnknownProperty')
       done()
     }))
 
   it('Set Read (sync) with non-TYPE value should throw', () =>
-    expect(() => server.SetProp(null, '/', 'com.example.readwrite', 'Read', 'foo'))
-      .to.throw(Error))
+    expect(() => server.Set({
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Read',
+      value: 'foo'
+    })).to.throw(Error))
 
   it('Set Read (sync) with BYTE should throw InvalidSignature', () =>
-    expect(() => server.SetProp(null, '/', 'com.example.readwrite', 'Read', 
-      new BYTE(1))).to.throw(Error)
-        .with.property('name', 'org.freedesktop.DBus.Error.InvalidSignature'))
+    expect(() => server.Set({
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Read',
+      value: new BYTE(1)
+    })).to.throw(Error)
+      .with.property('name', 'org.freedesktop.DBus.Error.InvalidSignature'))
 
   it('Set Read (sync) with STRING should succeed', () => {
-    server.SetProp(null, '/', 'com.example.readwrite', 'Read', new STRING('foo'))
-    const r = server.GetProp(null, '/', 'com.example.readwrite', 'Read')
+    server.Set({
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Read', 
+      value: new STRING('foo')
+    })
+
+    const r = server.Get({
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Read'
+    })
+
     expect(r).to.deep.equal(new VARIANT(new STRING('foo')))
   })
 
@@ -98,7 +138,7 @@ describe(path.basename(__filename) + ', local invoke', () => {
         path: '/',
         interface: 'org.freedesktop.DBus.Properties',
         member: 'PropertiesChanged',
-        reason: server.myName,
+        initiator: server.myName,
         body: [
           new STRING('com.example.readwrite'),
           new ARRAY([
@@ -112,8 +152,14 @@ describe(path.basename(__filename) + ', local invoke', () => {
       })
       done()
     })
-    server.SetProp(null, '/', 'com.example.readwrite', 'Read', new STRING('foo'))
-  }) 
+
+    server.Set({
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Read', 
+      value: new STRING('foo')
+    })
+  })
 
   it('Set Read (sync) with STRING should emit signal remotely', done => {
     client.AddMatch({
@@ -124,7 +170,12 @@ describe(path.basename(__filename) + ', local invoke', () => {
       path_namespace: '/'
     }, err => {
       expect(err).to.equal(null)
-      server.SetProp(null, '/', 'com.example.readwrite', 'Read', new STRING('foo')) 
+      server.Set({
+        path: '/', 
+        interfaceName: 'com.example.readwrite', 
+        propertyName: 'Read', 
+        value: new STRING('foo')
+      })
     })
 
     client.on('signal', signal => {

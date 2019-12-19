@@ -1,5 +1,6 @@
 /**
- * Defined in DBus Specification
+ *
+ * `org.freedesktop.DBus.Properties` interface is defined in DBus Specification
  *
  * ```
  * org.freedesktop.DBus.Properties.Get (
@@ -19,8 +20,9 @@
  *     DICT<STRING,VARIANT> changed_properties,
  *     ARRAY<STRING> invalidated_properties);
  * ```
+ * 
+ * @module PropertiesInterface
  */
-
 module.exports = {
   name: 'org.freedesktop.DBus.Properties',
   methods: [
@@ -59,3 +61,4 @@ module.exports = {
     }
   ]
 }
+

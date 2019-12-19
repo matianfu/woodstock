@@ -1,0 +1,7 @@
+{
+  "plugins": ["plugins/markdown"],
+  "opts": {
+      "private": true,
+      "template": "node_modules/minami"
+  }
+}

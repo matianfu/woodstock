@@ -82,19 +82,16 @@ const ERR_UNKNOWN_OBJECT = 'org.freedesktop.DBus.Error.UnknownObject'
  * DBus communicates with system dbus.
  *
  * - connect to system dbus automatically
- * - do a simple auth
- * - say hello to org.freedesktop.DBus
- * - handle hello replied from org.freedesktop.DBus
- * - emit connect or error if authentication or hello failed
+ *   - do a simple auth
+ *   - say hello to org.freedesktop.DBus
+ *   - handle hello replied from org.freedesktop.DBus
+ *   - emit connect or error if authentication or hello failed
  * - provides methods on org.freedesktop.DBus interface
  * - provides methods for invoking methods
- * - emit events for signals
+ * - emit signals
  * - buffer operations before connection established
  *
- * It is possible to have single DBus instance in an application.
- * But creating multiple instances for each components is more robust.
- *
- * @emits {object} m - emit signals, including internal and dbus
+ * @emits {object} m - signals from remote or local dbus objects
  */
 class DBus extends EventEmitter {
   /**
@@ -275,11 +272,21 @@ class DBus extends EventEmitter {
     this.socket.end()
   }
 
-
   /**
    * Low level send message to dbus
    *
    * @private
+   * @param {object} m
+   * @param {string} m.type - message type
+   * @param {object} [m.flags] - flags
+   * @param {string} m.path - required for method call/signal
+   * @param {string} m.interface - required for method
+   * @param {string} m.member - required for method call/signal
+   * @param {string} m.errorName - 
+   * @param {number} m.replySerial -
+   * @param {string} m.destination -
+   * @param {string} [m.signature] -
+   * @param {TYPE[]} [m.body] -
    */
   send (m) {
     const serial = this.serial++
@@ -301,6 +308,10 @@ class DBus extends EventEmitter {
 
   // TODO too small?
   // TODO slice data in packet
+
+  /**
+   * @private
+   */
   handleData (data) {
     this.data = Buffer.concat([this.data, data])
     while (1) {
@@ -326,6 +337,7 @@ class DBus extends EventEmitter {
         }
       })
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
+
       const pair = this.callMap.get(m.replySerial)
       if (pair) {
         this.callMap.delete(m.replySerial)
@@ -369,6 +381,8 @@ class DBus extends EventEmitter {
   /**
    * Listens on 'signal' event. Sends internal signal to dbus
    * and dispatch dbus message to registered handlers
+   * 
+   * @private
    * @param {object} s - signal
    */
   relaySignal (s) {
@@ -448,6 +462,7 @@ class DBus extends EventEmitter {
    *
    * This function is only used in `handleMethodCall'.
    *
+   * @private
    * @param {object} m - METHOD_CALL message
    * @param {undefined|TYPE|object} result - unwrapped or wrapped result
    * @param {TYPE} [wrapped.result] - wrapped result
@@ -494,6 +509,7 @@ class DBus extends EventEmitter {
   }
 
   /**
+   * @private
    * @param {object} m - original method invocation message
    * @param {Error} e - error
    */
@@ -593,7 +609,6 @@ class DBus extends EventEmitter {
     const index = this.nodes.findIndex(n => n.path === path)
     if (index === -1) throw new Error('object path not found')
     const [node] = this.nodes.splice(index, 1)
-
     this.emit('nodeRemoved', node)
   }
 
@@ -641,6 +656,90 @@ class DBus extends EventEmitter {
   }
   
   /**
+   * Implements org.freedesktop.DBus.Properties.Get
+   * 
+   * @param {object} m - message
+   * @param {string} [m.destination]
+   * @param {string} m.path - object path
+   * @param {string} m.interfaceName - interface name
+   * @param {string} m.propertyName - property name
+   */
+  Get ({ destination, path, interfaceName, propertyName }, callback) {
+    return this.invoke({
+      destination,
+      path, 
+      interface: 'org.freedesktop.DBus.Properties',
+      member: 'Get',
+      signature: 'ss',
+      body: [
+        new STRING(interfaceName),
+        new STRING(propertyName)
+      ]
+    }, callback)
+  }
+
+  /**
+   * Implements org.freedesktop.DBus.Properties.GetAll
+   * 
+   * @param {object} m
+   * @param {string} [m.destination]
+   * @param {string} m.path
+   * @param {string} m.interfacename
+   * @parma {function} [callback]
+   */
+  GetAll ({ destination, path, interfaceName }, callback) {
+    return this.invoke({
+      destination,
+      path,
+      interface: 'org.freedesktop.DBus.Properties',
+      member: 'GetAll',
+      signature: 's',
+      body: [new STRING(interfaceName)]
+    }, callback)
+  }
+
+  /**
+   * Implements org.freedesktop.DBus.Properties.Set
+   * 
+   * @param {object} m - message
+   * @param {string} [m.destination]
+   * @param {string} m.path
+   * @param {string} m.interfaceName
+   * @param {string} m.propertyName
+   * @param {TYPE} m.value
+   */
+  Set ({ destination, path, interfaceName, propertyName, value }, callback) {
+    return this.invoke({
+      destination,
+      path,
+      interface: 'org.freedesktop.DBus.Properties',
+      member: 'Set',
+      signature: 'ssv',
+      body: [
+        new STRING(interfaceName),
+        new STRING(propertyName),
+        new VARIANT(value)
+      ]
+    }, callback)
+  }
+
+  /**
+   * Implements org.freedesktop.DBus.ObjectManager.GetManagedObjects
+   * 
+   * @param {object} m
+   * @param {string} [m.destination]
+   * @param {string} m.path
+   */
+  GetManagedObjects ({ destination, path }, callback) {
+    return this.invoke({
+      destination,
+      path,
+      interface: 'org.freedesktop.DBus.ObjectManager',
+      member: 'GetManagedObjects'
+    }, callback)
+  }
+
+  /**
    * Invokes org.freedesktop.DBus.Peer.Ping
    *
    * @param {string} destination
@@ -674,7 +773,7 @@ class DBus extends EventEmitter {
       objectPath = '/'
     }
 
-    this.invoke({
+    return this.invoke({
       destination,
       path: objectPath,
       interface: 'org.freedesktop.DBus.Peer',
@@ -688,157 +787,6 @@ class DBus extends EventEmitter {
     })
   }
 
-  /**
-   * Implements org.freedesktop.DBus.Properties.Get
-   * 
-   * @param {string} destination
-   * @param {string} objectPath
-   * @param {string} interfacename
-   * @param {string} propName
-   * @param {function} [callback]
-   */
-  GetProp (destination, objectPath, interfaceName, propName, callback) {
-    return this.invoke({
-      destination,
-      path: objectPath,
-      interface: 'org.freedesktop.DBus.Properties',
-      member: 'Get',
-      signature: 'ss',
-      body: [
-        new STRING(interfaceName),
-        new STRING(propName)
-      ]
-    }, callback)
-  }
-
-  /**
-   * Implements org.freedesktop.DBus.Properties.GetAll
-   * 
-   * @param {string} [destination]
-   * @param {string} objectPath
-   * @param {string} interfacename
-   * @parma {function} [callback]
-   */
-  GetAllProps (destination, objectPath, interfaceName, callback) {
-    return this.invoke({
-      destination,
-      path: objectPath,
-      interface: 'org.freedesktop.DBus.Properties',
-      member: 'GetAll',
-      signature: 's',
-      body: [ new STRING(interfaceName) ]
-    }, callback)
-  }
-
-  /**
-   * Implements org.freedesktop.DBus.Properties.Set
-   */
-  SetProp (destination, objectPath, interfaceName, propName, value, callback) {
-    return this.invoke({
-      destination,
-      path: objectPath,
-      interface: 'org.freedesktop.DBus.Properties',
-      member: 'Set',
-      signature: 'ssv',
-      body: [
-        new STRING(interfaceName),
-        new STRING(propName),
-        new VARIANT(value)
-      ] 
-    }, callback)
-  }
-
-  /**
-   * org.freedesktop.DBus.ObjectManager.GetManagedObjects
-   */
-  GetManagedObjects (destination, objectPath, callback) {
-    return this.invoke({
-      destination,
-      path: objectPath,
-      interface: 'org.freedesktop.DBus.ObjectManager',
-      member: 'GetManagedObjects'
-    }, callback)
-  }
-
 }
 
 module.exports = DBus
-
-/**
- * { le: true,
- *   type: 'METHOD_CALL',
- *   flags: {},
- *   version: 1,
- *   serial: 4,
- *   path: '/',
- *   interface: 'org.freedesktop.DBus.Properties',
- *   member: 'Set',
- *   destination: ':1.1139',
- *   sender: ':1.1140',
- *   signature: 'ssv',
- *   body:
- *    [ STRING { value: 'com.example.readwrite' },
- *      STRING { value: 'ReadWrite' },
- *      VARIANT { sig: 'v', elems: [Array], esigs: [Array] } ],
- *   bytesDecoded: 192 }
- */
-
-/**
-  { le: true,
-    type: 'SIGNAL',
-    flags: { noReply: true },
-    version: 1,
-    serial: 5135,
-    path: '/fi/w1/wpa_supplicant1/Interfaces/11/BSSs/199',
-    interface: 'org.freedesktop.DBus.Properties',
-    member: 'PropertiesChanged',
-    signature: 'sa{sv}as',
-    sender: ':1.8',
-    body:
-     [ 'fi.w1.wpa_supplicant1.BSS', [ [ 'Age', [ 'u', 4 ] ] ], [] ],
-    bytesDecoded: 236 }
- * 
- */
-
-/**
-an example error
-{ type: 'ERROR',
-  flags: { noReply: true },
-  version: 1,
-  serial: 3,
-  destination: ':1.258',
-  errorName: 'org.freedesktop.DBus.Error.UnknownInterface',
-  replySerial: 2,
-  signature: 's',
-  sender: 'org.freedesktop.DBus',
-  body:
-   [ STRING {
-       value:
-        'org.freedesktop.DBus does not understand message GetManagedObjects' } ] }
-
-*/
-
-// message: 
-// { 
-//   le: true,
-//   type: 'ERROR',
-//   flags: {},
-//   version: 1,
-//   serial: 4,
-//   errorName: 'org.freedesktop.DBus.Error.AccessDenied',
-//   replySerial: 4,
-//   destination: ':1.671',
-//   sender: ':1.670',
-//   signature: 's',
-//   body: [ STRING { value: 'internal error' } ],
-//   bytesDecoded: 131 
-// }
-// 
-// error: 
-// {
-//   message: 'internal error',
-//   code: 'ERR_DBUS_ERROR',
-//   name: 'org.freedesktop.DBus.Error.AccessDenied',
-// }
-
-

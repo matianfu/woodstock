@@ -52,15 +52,18 @@ describe(path.basename(__filename) +
     client.end()
   })
 
-  it.skip('empty dict if no children', done => {
-    client.GetManagedObjects(server.myName, '/', (err, body) => {
+  it('empty dict if no children', done => {
+    client.GetManagedObjects({
+      destination: server.myName, 
+      path: '/' 
+    }, (err, body) => {
       expect(err).to.equal(null)
       expect(body).to.deep.equal([new ARRAY('a{oa{sa{sv}}}')])
       done()
     })
   })
 
-  it.skip('server add /hello should emit internal signal', done => {
+  it('server add /hello should emit internal signal', done => {
     server.on('signal', s => {
       expect(s.origin).to.equal(null)
       expect(s.path).to.equal('/')
@@ -97,13 +100,14 @@ describe(path.basename(__filename) +
         {
           interface: 'com.example.readwrite',
           Read: new STRING('hello'),
-          ReadWrite: new STRING('foo')
+          ReadWrite: new STRING('foo'),
+          Update () {}
         }
       ]
     })
   })
 
-  it.skip('server add /hello should emit DBus signal', done => {
+  it('server add /hello should emit DBus signal', done => {
     client.AddMatch({
       type: 'signal',
       sender: server.myName,
@@ -150,7 +154,8 @@ describe(path.basename(__filename) +
           {
             interface: 'com.example.readwrite',
             Read: new STRING('hello'),
-            ReadWrite: new STRING('foo')
+            ReadWrite: new STRING('foo'),
+            Update () {}
           }
         ]
       })

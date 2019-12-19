@@ -1,23 +1,34 @@
 const { TYPE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types') 
 
-/**
- * > Quote from DBus Specification:
- * >
- * > All returned object paths are children of the object path
- * > implementing this interface, i.e. their object paths start
- * > with the ObjectManager's object path plus '/'.
+
+/** 
+ * Implements `org.freedesktop.DBus.ObjectManager`
+ *
+ * ```
+ * org.freedesktop.DBus.ObjectManager.GetManagedObjects (out
+ *   DICT<OBJPATH,DICT<STRING,DICT<STRING,VARIANT>>> objpath_interfaces_and_properties);
+ * ```
+ *
+ * @module OmTemplate 
  */
-
-// org.freedesktop.DBus.ObjectManager.GetManagedObjects (
-//   out
-//   DICT<OBJPATH,DICT<STRING,DICT<STRING,VARIANT>>>
-//   objpath_interfaces_and_properties);
-
-const om = {
+module.exports = {
+  /**
+   * interface name
+   */
   interface: 'org.freedesktop.DBus.ObjectManager',
 
   /** 
-   * type="a{oa{sa{sv}}}" 
+   * GetManagedObjects returns all **proper** children.
+   *
+   * > from DBus Specification:
+   * >
+   * > All returned object paths are children of the object path
+   * > implementing this interface, i.e. their object paths start
+   * > with the ObjectManager's object path plus '/'.
+   *
+   * type signature of returned object is "a{oa{sa{sv}}}".
+   *
+   * @returns {TYPE} `objpath_interfaces_and_properties`
    */
   GetManagedObjects () {
     const children = this.nodes.getProperChildren(this.node)
@@ -61,11 +72,17 @@ const om = {
   },
 
   /**
-   * org.freedesktop.DBus.ObjectManager.InterfacesAdded (
-   *   OBJPATH object_path,
-   *   DICT<STRING,DICT<STRING,VARIANT>> interfaces_and_properties);
+   * listens to node added event and emits `InterfacesAdded` signal
+   *
+   * @param {object} node
    */
   nodeAdded (node) {
+    /**
+     * org.freedesktop.DBus.ObjectManager.InterfacesAdded (
+     *   OBJPATH object_path,
+     *   DICT<STRING,DICT<STRING,VARIANT>> interfaces_and_properties);
+     */
+
     if (!this.nodes.hasProperChild(this.node, node)) return
       const ifaces = []
       node.implementations.forEach(impl => {
@@ -83,7 +100,6 @@ const om = {
 
         ifaces.push(new DICT_ENTRY([
           new STRING(ifaceName), 
-//          new ARRAY(props, 'a{sv}')
           new ARRAY('a{sv}', props)
         ]))
       })
@@ -91,7 +107,6 @@ const om = {
       const ifacesAndProps = new ARRAY('a{sa{sv}}', ifaces)
 
       this.node.signal({
-        origin: null,
         path: this.node.path,
         interface: 'org.freedesktop.DBus.ObjectManager',
         member: 'InterfacesAdded',
@@ -99,16 +114,34 @@ const om = {
       })
   },
 
+  /**
+   * listens to node removed event and emits `InterfacesRemoved` signal
+   * 
+   * @param {object} node
+   */
   nodeRemoved (node) {
     if (this.nodes.hasProperChild(this.node, node)) {
     // TODO signal
     }
   },
 
+  /**
+   * Getter function
+   */
   get nodes () {
     return this._nodes
   },
 
+  /**
+   * Setter function for `this.nodes`
+   * 
+   * `node` and `nodes` has mutual references, which are established when
+   * a `node` is added to `nodes`. `node` will populate `nodes` property to 
+   * all implementations. As a setter, we have a chance to hook event listeners
+   * onto `nodes`.
+   * 
+   * @param {object} value
+   */
   set nodes (value) {
     if (!this._nodes && value) {
       this._nodes = value
@@ -126,4 +159,3 @@ const om = {
   }
 }
 
-module.exports = om

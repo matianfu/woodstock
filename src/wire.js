@@ -47,7 +47,26 @@ const {
  *               9   UNIX_FDS      UINT32            optional
  * ```
  *
+ * |propert        |type       |METHOD_CALL|METHOD_RETURN|ERROR |SIGNAL|
+ * |---------------|-----------|-----------|-------------|------|------|
+ * |le             |boolean    |Y          |Y            |Y     |Y     |
+ * |type           |string     |Y          |Y            |Y     |Y     |
+ * |flags          |object     |Y          |Y            |Y     |Y     |
+ * |version        |number     |Y          |Y            |Y     |Y     |
+ * |serial         |number     |Y          |Y            |Y     |Y     |
+ * |**path**       |**string** |**Y**      |             |      |**Y** |
+ * |**interface**  |**string** |**Y**      |             |      |**Y** |
+ * |**member**     |**string** |**Y**      |             |      |**Y** |
+ * |errorName      |string     |           |             |Y     |      |
+ * |replySerial    |number     |           |Y            |Y     |      |
+ * |**destination**|**string** |**Y**      |**Y**        |**Y** |      |
+ * |sender         |string     |Y          |Y            |Y     |Y     |
+ * |**signature**  |**string** |**O**      |**O**        |**Y** |**O** |
+ * |**body**       |**TYPE[]** |**O**      |**O**        |**Y** |**O** |
+ * |bytesDecoded   |number     |Y          |Y            |Y     |Y     |
+ *
  * 
+ *
  * @module dbus-codec
  */
 
@@ -307,6 +326,7 @@ const encode = (m, serial, name = '') => {
 }
 
 /**
+ *
  * @typedef DecodedMessage
  * @property {boolean} le - true for little endian
  * @property {string} type - type string

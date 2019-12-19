@@ -1,9 +1,15 @@
 const { TYPE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('../types')
 
+/**
+ * Implements `org.freedesktop.DBus.Properties` interface
+ * 
+ * @module PropertiesTemplate
+ */
 module.exports = {
+  /** interface name */
   interface: 'org.freedesktop.DBus.Properties',
 
-  // This function should not be here
+  // This function should not be here, TODO, why?
   getImplementation (name) {
     const impl = this.node.implementations.find(impl => impl.interface.name === name)
     if (!impl) {
@@ -15,6 +21,11 @@ module.exports = {
     return impl
   },
 
+  /**
+   * Get Property
+   * 
+   * @param {object} m - message
+   */
   Get (m) {
     const iname = m.body[0].value
     const pname = m.body[1].value
@@ -35,6 +46,11 @@ module.exports = {
     return new VARIANT(prop) 
   },
 
+  /**
+   * Get all properties on given interface
+   *
+   * @param {object} m - message 
+   */
   GetAll (m) {
     const iname = m.body[0].value
     const impl = this.getImplementation(iname)
@@ -51,6 +67,11 @@ module.exports = {
     return new ARRAY(arr)
   },
 
+  /**
+   * Set property to given value
+   *
+   * @param {object} m - message
+   */
   Set (m) {
     const interfaceName = m.body[0].value
     const propertyName = m.body[1].value
@@ -86,18 +107,21 @@ module.exports = {
   },
 
   /**
+   * emit PropertiesChanged signal
+   *
    * @param {string} interfaceName
    * @param {object} changeProperties
    * @param {string[]} invalidatedProperties
    * @param {object} trigger
    */
-  signal (interfaceName, 
+  signal (
+    interfaceName, 
     changedProperties, 
     invalidatedProperties = [],
-    m = {}
+    m = { sender: null }
   ) {
     const s = {
-      reason: m.sender,
+      initiator: m.sender,
       path: this.node.path,
       interface: 'org.freedesktop.DBus.Properties',
       member: 'PropertiesChanged',

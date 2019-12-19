@@ -393,108 +393,151 @@ describe(path.basename(__filename) +
   })
 
   it('Get Read should succeed', done =>
-    client.GetProp(server.myName, '/', 'com.example.readwrite', 'Read',
-      (err, body) => {
-        if (err) return done(err)
-        expect(body).to.deep.equal([new VARIANT(new STRING('hello'))])
-        done()
-      }))
+    client.Get({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Read'
+    }, (err, body) => {
+      if (err) return done(err)
+      expect(body).to.deep.equal([new VARIANT(new STRING('hello'))])
+      done()
+    }))
 
   it('Get Write should fail with UnknownProperty', done =>
-    client.GetProp(server.myName, '/', 'com.example.readwrite', 'Write',
-      (err, body) => {
-        expect(err).is.an('Error')
-        expect(err.code).to.equal('ERR_DBUS_ERROR')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.UnknownProperty')
-        done()
-      }))
+    client.Get({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Write'
+    }, (err, body) => {
+      expect(err).is.an('Error')
+      expect(err.code).to.equal('ERR_DBUS_ERROR')
+      expect(err.name).to.equal('org.freedesktop.DBus.Error.UnknownProperty')
+      done()
+    }))
 
   it('Get ReadWrite should succeed', done =>
-    client.GetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-      (err, body) => {
-        if (err) return done(err)
-        expect(body).to.deep.equal([new VARIANT(new STRING('foo'))])
-        done()
-      }))
+    client.Get({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'ReadWrite'
+    }, (err, body) => {
+      if (err) return done(err)
+      expect(body).to.deep.equal([new VARIANT(new STRING('foo'))])
+      done()
+    }))
 
   it('GetAll should return Read and ReadWrite but no Write', done =>
-    client.GetAllProps(server.myName, '/', 'com.example.readwrite',
-      (err, body) => {
-        if (err) return done(err)
-        expect(body).to.deep.equal([
-          new ARRAY([
-            new DICT_ENTRY([
-              new STRING('Read'),
-              new VARIANT(new STRING('hello'))
-            ]),
-            new DICT_ENTRY([
-              new STRING('ReadWrite'),
-              new VARIANT(new STRING('foo'))
-            ])
+    client.GetAll({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite'
+    }, (err, body) => {
+      if (err) return done(err)
+      expect(body).to.deep.equal([
+        new ARRAY([
+          new DICT_ENTRY([
+            new STRING('Read'),
+            new VARIANT(new STRING('hello'))
+          ]),
+          new DICT_ENTRY([
+            new STRING('ReadWrite'),
+            new VARIANT(new STRING('foo'))
           ])
         ])
-        done()
-      }))
+      ])
+      done()
+    }))
 
   it('Set Read should fail with PropertyReadOnly', done =>
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'Read',
-      new STRING('bar'),
-      (err, body) => {
-        expect(err).to.be.an('Error')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.PropertyReadOnly')
-        expect(err.code).to.equal('ERR_DBUS_ERROR')
-        done()
-      }))
+    client.Set({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Read',
+      value: new STRING('bar')
+    }, (err, body) => {
+      expect(err).to.be.an('Error')
+      expect(err.name).to.equal('org.freedesktop.DBus.Error.PropertyReadOnly')
+      expect(err.code).to.equal('ERR_DBUS_ERROR')
+      done()
+    }))
 
   it('Set Write to "bar" should failed with UnknownProperty', done =>
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'Write',
-      new STRING('bar'),
-      (err, body) => {
-        expect(err).to.be.an('Error')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.UnknownProperty')
-        expect(err.code).to.equal('ERR_DBUS_ERROR')
-        done()
-      }))
+    client.Set({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'Write',
+      value: new STRING('bar')
+    }, (err, body) => {
+      expect(err).to.be.an('Error')
+      expect(err.name).to.equal('org.freedesktop.DBus.Error.UnknownProperty')
+      expect(err.code).to.equal('ERR_DBUS_ERROR')
+      done()
+    }))
 
-  it('Set ReadWrite to BYTE should fail with InvalidSignature', done => {
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-      new BYTE(2),
-      (err, body) => {
-        expect(err).to.be.an('Error')
-        expect(err.name).to.equal('org.freedesktop.DBus.Error.InvalidSignature')
-        expect(err.code).to.equal('ERR_DBUS_ERROR')
-        done()
-      })
-  })
+  it('Set ReadWrite to BYTE should fail with InvalidSignature', done => 
+    client.Set({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'ReadWrite',
+      value: new BYTE(2)
+    }, (err, body) => {
+      expect(err).to.be.an('Error')
+      expect(err.name).to.equal('org.freedesktop.DBus.Error.InvalidSignature')
+      expect(err.code).to.equal('ERR_DBUS_ERROR')
+      done()
+    }))
 
   it('Set ReadWrite to "bar" should succeed', done =>
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-      new STRING('bar'),
-      (err, body) => {
-        expect(err).to.equal(null)
-        expect(body).to.equal(undefined)
-        done()
-      }))
+    client.Set({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'ReadWrite',
+      value: new STRING('bar')
+    }, (err, body) => {
+      expect(err).to.equal(null)
+      expect(body).to.equal(undefined)
+      done()
+    }))
 
   it('Set ReadWrite to "bar" and read back should be "bar"', done =>
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-      new STRING('bar'),
-      (err, body) => {
-        if (err) return done(err)
-        client.GetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-          (err, body) => {
-            expect(err).to.equal(null)
-            expect(body).to.deep.equal([new VARIANT(new STRING('bar'))])
-            done()
-          })
-      }))
+    client.Set({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'ReadWrite',
+      value: new STRING('bar')
+    }, (err, body) => {
+      if (err) return done(err)
+      client.Get({
+        destination: server.myName, 
+        path: '/', 
+        interfaceName: 'com.example.readwrite', 
+        propertyName: 'ReadWrite'
+      }, (err, body) => {
+        expect(err).to.equal(null)
+        expect(body).to.deep.equal([new VARIANT(new STRING('bar'))])
+        done()
+      })
+    }))
 
   it('Set ReadWrite to "bar" should emit signal on server', done => {
-    client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-      new STRING('bar'), (err, body) => { })
+    client.Set({
+      destination: server.myName, 
+      path: '/', 
+      interfaceName: 'com.example.readwrite', 
+      propertyName: 'ReadWrite',
+      value: new STRING('bar')
+    }, (err, body) => { })
 
     server.on('signal', s => {
-      expect(s.reason).to.equal(client.myName)
+      expect(s.initiator).to.equal(client.myName)
       expect(s.path).to.equal('/')
       expect(s.interface).to.equal('org.freedesktop.DBus.Properties')
       expect(s.member).to.equal('PropertiesChanged')
@@ -522,10 +565,13 @@ describe(path.basename(__filename) +
     }, err => {
       if (err) return done(err)
 
-      client.SetProp(server.myName, '/', 'com.example.readwrite', 'ReadWrite',
-        new STRING('bar'), (err, body) => { 
-          // console.log(err || body)
-        })
+      client.Set({
+        destination: server.myName, 
+        path: '/', 
+        interfaceName: 'com.example.readwrite', 
+        propertyName: 'ReadWrite',
+        value: new STRING('bar')
+      }, (err, body) => { })
 
       client.on('signal', s => {
         expect(s.sender).to.equal(server.myName)

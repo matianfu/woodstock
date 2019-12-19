@@ -4,7 +4,8 @@ const net = require('net')
 
 const debug = require('debug')('dbus-driver')
 
-const { TYPE, STRING, VARIANT } = require('./types')
+const Types = require('./types')
+const { TYPE, STRING, VARIANT } = Types
 const { encode, decode } = require('./wire')
 const normalizeInterface = require('./interface')
 const validateImplementation = require('./implementation')
@@ -282,7 +283,7 @@ class DBus extends EventEmitter {
    * @param {string} m.path - required for method call/signal
    * @param {string} m.interface - required for method
    * @param {string} m.member - required for method call/signal
-   * @param {string} m.errorName - 
+   * @param {string} m.errorName -
    * @param {number} m.replySerial -
    * @param {string} m.destination -
    * @param {string} [m.signature] -
@@ -337,7 +338,6 @@ class DBus extends EventEmitter {
         }
       })
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
-
       const pair = this.callMap.get(m.replySerial)
       if (pair) {
         this.callMap.delete(m.replySerial)
@@ -372,16 +372,15 @@ class DBus extends EventEmitter {
         signature: m.signature,
         body: m.body,
         sender: m.sender
-      } 
+      }
       this.emit('signal', s)
     }
   }
 
-
   /**
    * Listens on 'signal' event. Sends internal signal to dbus
    * and dispatch dbus message to registered handlers
-   * 
+   *
    * @private
    * @param {object} s - signal
    */
@@ -392,12 +391,12 @@ class DBus extends EventEmitter {
         flags: { noReply: true },
         path: s.path,
         interface: s.interface,
-        member: s.member,
+        member: s.member
       }
 
       if (s.body) {
         m.signature = s.body.map(elem => elem.signature()).join('')
-        m.body = s.body 
+        m.body = s.body
       }
 
       this.send(m)
@@ -412,14 +411,14 @@ class DBus extends EventEmitter {
    * returns result synchronously.
    *
    * @param {object} m
-   * @param {string} m.destination - service name. 
+   * @param {string} m.destination - service name.
    * @param {string} m.path - object path.
    * @param {string} m.interface - interface name
    * @param {string} m.member - method name
    * @param {string} m.signature -
    * @param {TYPE[]} m.body - argument list, in TYPE format
    * @param {function} callback - callback for remote or asynchronous methods.
-   */ 
+   */
   invoke (m, callback) {
     const unwrap = r => (r === undefined || r instanceof TYPE) ? r : r.result
 
@@ -427,7 +426,7 @@ class DBus extends EventEmitter {
     if (!m.sender) m.sender = this.myName
 
     if (m.destination === this.myName) {
-      const node = this.nodes.find(m.path) 
+      const node = this.nodes.find(m.path)
       if (!node) {
         const e = new Error('object not found')
         e.name = 'org.freedesktop.DBus.Error.UnknownObject'
@@ -447,7 +446,7 @@ class DBus extends EventEmitter {
       }
     } else {
       if (!callback) callback = () => {}
-      const serial = this.send(Object.assign({}, m, { type: 'METHOD_CALL' })) 
+      const serial = this.send(Object.assign({}, m, { type: 'METHOD_CALL' }))
       this.callMap.set(serial, [m, callback])
     }
   }
@@ -474,8 +473,8 @@ class DBus extends EventEmitter {
       type: 'METHOD_RETURN',
       flags: { noReply: true },
       destination: m.sender,
-      replySerial: m.serial,
-    } 
+      replySerial: m.serial
+    }
 
     if (result === undefined) {
       this.send(o)
@@ -519,17 +518,17 @@ class DBus extends EventEmitter {
       flags: { noRepy: true },
       destination: m.sender,
 
-      // e.name must be a dot separated string, otherwise 
+      // e.name must be a dot separated string, otherwise
       // DBus daemon disconnects.
-      errorName: (typeof e.name === 'string' && 
+      errorName: (typeof e.name === 'string' &&
         e.name.includes('.') &&
         e.name.split('.').length &&
-        e.name.split('.').every(x => x.length)) 
-          ? e.name : 'org.freedesktop.DBus.Error.Failed',
+        e.name.split('.').every(x => x.length))
+        ? e.name : 'org.freedesktop.DBus.Error.Failed',
 
       replySerial: m.serial,
       signature: 's',
-      body: [new STRING(e.message || 'internal error')],
+      body: [new STRING(e.message || 'internal error')]
     }
 
     this.send(r)
@@ -579,7 +578,7 @@ class DBus extends EventEmitter {
    * Creates a DBus object
    *
    * If the implementation is a string, it is an interface name.
-   * If the implementation is an object. 
+   * If the implementation is an object.
    * ```
    * {
    *   interface: 'interface name', // replace by a reference to interface
@@ -588,8 +587,8 @@ class DBus extends EventEmitter {
    *   [signals]
    * }
    * ```
-   * 
-   * @param {object} opts 
+   *
+   * @param {object} opts
    * @param {string} opts.path - object path
    * @param {Array<string|object>} - an array of implementations
    */
@@ -612,7 +611,6 @@ class DBus extends EventEmitter {
     this.emit('nodeRemoved', node)
   }
 
-
   /**
    * Add a match rules.
    *
@@ -620,7 +618,7 @@ class DBus extends EventEmitter {
    * type='signal'
    * sender='service you want to observer'
    * interface='org.freedesktop.DBus.Properties'
-   * member='PropertiesChanged' 
+   * member='PropertiesChanged'
    * path_namespace='a high level path'
    * ```
    *
@@ -640,8 +638,8 @@ class DBus extends EventEmitter {
     const keys = ['type', 'sender', 'interface', 'member', 'path', 'path_namespace']
 
     const s = keys
-      .reduce((arr, key) => rule[key] 
-        ? [...arr, `${key}='${rule[key]}'`] 
+      .reduce((arr, key) => rule[key]
+        ? [...arr, `${key}='${rule[key]}'`]
         : arr, [])
       .join(',')
 
@@ -654,10 +652,10 @@ class DBus extends EventEmitter {
       body: [new STRING(s)]
     }, err => callback(err))
   }
-  
+
   /**
    * Implements org.freedesktop.DBus.Properties.Get
-   * 
+   *
    * @param {object} m - message
    * @param {string} [m.destination]
    * @param {string} m.path - object path
@@ -667,7 +665,7 @@ class DBus extends EventEmitter {
   Get ({ destination, path, interfaceName, propertyName }, callback) {
     return this.invoke({
       destination,
-      path, 
+      path,
       interface: 'org.freedesktop.DBus.Properties',
       member: 'Get',
       signature: 'ss',
@@ -680,7 +678,7 @@ class DBus extends EventEmitter {
 
   /**
    * Implements org.freedesktop.DBus.Properties.GetAll
-   * 
+   *
    * @param {object} m
    * @param {string} [m.destination]
    * @param {string} m.path
@@ -700,13 +698,14 @@ class DBus extends EventEmitter {
 
   /**
    * Implements org.freedesktop.DBus.Properties.Set
-   * 
+   *
    * @param {object} m - message
    * @param {string} [m.destination]
    * @param {string} m.path
    * @param {string} m.interfaceName
    * @param {string} m.propertyName
    * @param {TYPE} m.value
+   * @param {function} [callback]
    */
   Set ({ destination, path, interfaceName, propertyName, value }, callback) {
     return this.invoke({
@@ -725,7 +724,7 @@ class DBus extends EventEmitter {
 
   /**
    * Implements org.freedesktop.DBus.ObjectManager.GetManagedObjects
-   * 
+   *
    * @param {object} m
    * @param {string} [m.destination]
    * @param {string} m.path
@@ -786,7 +785,8 @@ class DBus extends EventEmitter {
       }
     })
   }
-
 }
+
+DBus.Types = Types
 
 module.exports = DBus

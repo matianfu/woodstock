@@ -1,6 +1,7 @@
 {
   "plugins": ["plugins/markdown"],
   "opts": {
+      "destination": "docs/dbus",
       "private": true,
       "template": "node_modules/minami"
   }

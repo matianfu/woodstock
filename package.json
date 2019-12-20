@@ -1,5 +1,5 @@
 {
-  "name": "woodstock",
+  "name": "@matianfu/woodstock",
   "version": "0.1.0",
   "description": "Yet Another DBus Implementation",
   "main": "index.js",

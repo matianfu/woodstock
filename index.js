@@ -1,1 +1,1 @@
-module.exports = DBus
+module.exports = require('./src/dbus')

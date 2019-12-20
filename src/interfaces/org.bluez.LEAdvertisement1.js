@@ -1,37 +1,34 @@
-// see https://git.kernel.org/pub/scm/bluetooth/bluez.git/tree/test/example-advertisement
-
 /**
- * Example code in python.
+ *
+ * [Code example](https://git.kernel.org/pub/scm/bluetooth/bluez.git/tree/test/example-advertisement) in python:
  *
  * ```Python
  * def get_properties(self):
  *     properties = dict()
  *     properties['Type'] = self.ad_type
  *     if self.service_uuids is not None:
- *         properties['ServiceUUIDs'] = dbus.Array(self.service_uuids,
- *                                                 signature='s')
+ *         properties['ServiceUUIDs'] = dbus.Array(self.service_uuids, signature='s')
  *     if self.solicit_uuids is not None:
- *         properties['SolicitUUIDs'] = dbus.Array(self.solicit_uuids,
- *                                                 signature='s')
+ *         properties['SolicitUUIDs'] = dbus.Array(self.solicit_uuids, signature='s')
  *     if self.manufacturer_data is not None:
  *         properties['ManufacturerData'] = dbus.Dictionary(
  *             self.manufacturer_data, signature='qv')
  *     if self.service_data is not None:
- *         properties['ServiceData'] = dbus.Dictionary(self.service_data,
- *                                                     signature='sv')
+ *         properties['ServiceData'] = dbus.Dictionary(self.service_data, signature='sv')
  *     if self.local_name is not None:
  *         properties['LocalName'] = dbus.String(self.local_name)
  *     if self.include_tx_power is not None:
  *         properties['IncludeTxPower'] = dbus.Boolean(self.include_tx_power)
  * 
  *     if self.data is not None:
- *         properties['Data'] = dbus.Dictionary(
- *             self.data, signature='yv')
+ *         properties['Data'] = dbus.Dictionary(self.data, signature='yv')
  *     return {LE_ADVERTISEMENT_IFACE: properties}
  * ```
+ * 
+ * @module LEAdvertisement1
  */
 module.exports = {
-  name: 'org.bluez.LEAdertisement1',
+  name: 'org.bluez.LEAdvertisement1',
   methods: [
     {
       name: 'Release',
@@ -52,7 +49,7 @@ module.exports = {
     },
     {
       name: 'ManufacturerData',
-      type: 'a{qv}',            // DICT, 0xffff, byte....
+      type: 'a{qv}',            // DICT, 0xffff, byte array
       access: 'read',
       optional: true
     },

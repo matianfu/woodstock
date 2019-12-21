@@ -279,7 +279,10 @@ module.exports = {
   properties: [
     { name: 'UUID', type: 's', access: 'read' },
     { name: 'Service', type: 'o', access: 'read' },
-    { name: 'Value', type: 'ay', access: 'read', optional: true },
+
+    // write is allowed for reusing Set method on Properties interface
+    { name: 'Value', type: 'ay', access: 'readwrite', optional: true },
+
     { name: 'WriteAcquired', type: 'b', access: 'read', optional: true },
     { name: 'NotifyAcquired', type: 'b', access: 'read', optional: true },
     { name: 'Notifying', type: 'b', access: 'read', optional: true },

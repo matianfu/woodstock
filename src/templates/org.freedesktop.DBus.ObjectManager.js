@@ -56,6 +56,11 @@ module.exports = {
             new STRING(ifaceName),
             new ARRAY(props) 
           ]))
+        } else {
+          ifaces.push(new DICT_ENTRY([
+            new STRING(ifaceName),
+            new ARRAY('a{sv}')
+          ]))
         }
       })
 

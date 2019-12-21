@@ -2,7 +2,7 @@ const path = require('path')
 const EventEmitter = require('events')
 const net = require('net')
 
-const debug = require('debug')('dbus-driver')
+const Debug = require('debug')
 
 const Types = require('./types')
 const { TYPE, STRING, VARIANT } = Types
@@ -20,6 +20,9 @@ const print = buf => {
 }
 
 const ERR_UNKNOWN_OBJECT = 'org.freedesktop.DBus.Error.UnknownObject'
+
+const debugRemoteMethod = Debug('dbus:remote-method')
+const debugSignal = Debug('dbus:signal')
 
 /**
  * DBus has a compact and versatile design to allow the user to
@@ -233,6 +236,7 @@ class DBus extends EventEmitter {
               console.log(err)
             } else {
               this.myName = body[0].value
+
               this.invoke({
                 destination: 'org.freedesktop.DBus',
                 path: '/org/freedesktop/DBus',
@@ -246,6 +250,12 @@ class DBus extends EventEmitter {
                   process.nextTick(() => this.emit('connect'))
                 }
               })
+
+/*
+              this.invoke({
+              }, (err, body) => {
+              })
+*/
             }
           })
         } else {
@@ -331,11 +341,23 @@ class DBus extends EventEmitter {
   handleMessage (m) {
     if (m.type === 'METHOD_CALL') {
       this.invoke(m, (err, result) => {
+        let out
         if (err) {
           this.errorReturn(m, err)
         } else {
           this.methodReturn(m, result)
+
+          if (typeof result === 'object' && !(result instanceof TYPE)) {
+            out = result.result    
+          } else {
+            out = result
+          }
+
+          if (out instanceof TYPE) out = out.eval()
+
         }
+
+        debugRemoteMethod(m, err || out)
       })
     } else if (m.type === 'METHOD_RETURN' || m.type === 'ERROR') {
       const pair = this.callMap.get(m.replySerial)
@@ -385,6 +407,10 @@ class DBus extends EventEmitter {
    * @param {object} s - signal
    */
   relaySignal (s) {
+
+    debugSignal(Object.assign({}, s, s.body && { body: s.body.map(arg => arg.eval()) }))
+
+    if (!this.connected) return
     if (!s.sender) {
       const m = {
         type: 'SIGNAL',
@@ -590,7 +616,7 @@ class DBus extends EventEmitter {
    *
    * @param {object} opts
    * @param {string} opts.path - object path
-   * @param {Array<string|object>} - an array of implementations
+   * @param {Array<string|object>} opts.implementations - an array of implementation objects
    */
   addNode ({ path, implementations }) {
     const node = new Node(implementations, this.interfaces, this.templates)

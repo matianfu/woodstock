@@ -60,6 +60,7 @@ module.exports = {
     { name: 'UUID', type: 's', access: 'read' },
     { name: 'Primary', type: 'b', access: 'read' },
     { name: 'Device', type: 'o', access: 'read', optional: true },
+    { name: 'Characteristics', type: 'ao', access: 'read', optional: true },
     { name: 'Includes', type: 'ao', access: 'read', optional: true },
     { name: 'Handle', type: 'q', access: 'readwrite', optional: true }  
   ]

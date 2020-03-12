@@ -112,7 +112,7 @@ describe(path.basename(__filename), () => {
     done()
   })
 
-  it('TypeError "property bar not a TYPE object" ' +
+  it('TypeError "value not a string" ' +
     'if bar is required and set to true', done => {
     const iface = normalize({
       name: 'hello',
@@ -124,11 +124,13 @@ describe(path.basename(__filename), () => {
     })
     const impl = { interface: 'hello', name: 'default', bar: true }
     const f = () => validate(iface, impl)
-    expect(f).to.throw(TypeError, 'property bar not a TYPE object')
+    // expect(f).to.throw(TypeError, 'property bar not a TYPE object')
+    // this error is throw from types when constructing a STRING now
+    expect(f).to.throw(TypeError, 'value not a string')
     done()
   })
 
-  it('TypeError "property bar not a TYPE object" ' +
+  it('TypeError "value not a string" ' +
     'if bar is optional and set to true', done => {
     const iface = normalize({
       name: 'hello',
@@ -141,7 +143,7 @@ describe(path.basename(__filename), () => {
     })
     const impl = { interface: 'hello', name: 'default', bar: true }
     const f = () => validate(iface, impl)
-    expect(f).to.throw(TypeError, 'property bar not a TYPE object')
+    expect(f).to.throw(TypeError, 'value not a string')
     done()
   })
 

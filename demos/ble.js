@@ -1,8 +1,7 @@
-const DBus = require('../src/dbus')
+const woodstock = require('../index')
+const { BYTE, BOOLEAN, STRING, OBJECT_PATH, ARRAY, VARIANT } = woodstock.types
 
-const { BYTE, BOOLEAN, STRING, OBJECT_PATH, ARRAY, VARIANT } = DBus.Types
-
-const dbus = new DBus()
+const dbus = woodstock()
 
 dbus.addNode({
   path: '/',
@@ -208,7 +207,7 @@ dbus.on('connect', () => {
 })
 
 dbus.on('signal', signal => {
-  if (signal.initiator) {
+  if (!signal.initiator && !signal.sender) {
     const body = signal.body.map(arg => arg.eval())
     console.dir(Object.assign({}, signal, { body }), { depth: 5 })
   }

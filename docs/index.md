@@ -6,7 +6,7 @@ It allows the user program to access system services, such as NetworkManager, vi
 
 Sometimes, the user program may also need to provide a simple service via DBus. For example, Bluez requires the client program to register its own DBus objects to implement BLE advertisement or GATT services. `woodstock` fits this requirement easily.
 
-`woodstock` is not intended to be a fully-fledged DBus library, providing all APIs from `org.freedesktop.DBus`, or allowing the user program to implment a complex service which cannot be represented by a value store.
+`woodstock` is not intended to be a fully-fledged DBus library, providing all APIs from `org.freedesktop.DBus`, or allowing the user program to implement a complex service which cannot be represented by a simple value store.
 
 The following interfaces are supported:
 
@@ -35,6 +35,14 @@ For providing DBus services, the user program create DBus object via `addNode` m
 DBus is a binary protocol which defines its own data types.
 
 # Local DBus Object
+
+`woodstock` manages a collection of **local** object to provide service to remote DBus client.
+
+These objects are created by user via `addNode` method or destroyed via `removeNode` method.
+
+`woodstock` also allows user to access local object method and properties via `invoke` method. Signals from local object are also emitted from DBus.
+
+This design unified the user interface for remote and local object.
 
 # Message Flow
 
@@ -74,22 +82,37 @@ The last two properties, `bytesDecoded` and `initiator` are not defined in DBus 
 |flags          |object     |Y     |Y     |Y     |Y     |
 |version        |number     |Y     |Y     |Y     |Y     |
 |serial         |number     |Y     |Y     |Y     |Y     |
-|path           |string     |Y     |      |      |Y     |
-|interface      |string     |Y     |      |      |Y     |
-|member         |string     |Y     |      |      |Y     |
+|path           |string     |Y*    |      |      |Y*    |
+|interface      |string     |Y*    |      |      |Y*    |
+|member         |string     |Y*    |      |      |Y*    |
 |errorName      |string     |      |      |Y     |      |
 |replySerial    |number     |      |Y     |Y     |      |
-|destination    |string     |Y     |Y     |Y     |      |
-|sender         |string     |Y     |Y     |Y     |Y     |
-|signature      |string     |O     |O     |Y     |O     |
-|body           |TYPE[]     |O     |O     |Y     |O     |
+|destination    |string     |Y*    |Y     |Y     |      |
+|sender         |string     |Y*    |Y     |Y     |Y     |
+|signature      |string     |O*    |O     |Y     |O*    |
+|body           |TYPE[]     |O*    |O     |Y     |O*    |
 |
 |bytesDecoded   |number     |Y     |Y     |Y     |Y     |unmarshalled mesage
-|initiator      |string     |      |      |      |Y     |signal from local DBus object
+|initiator      |string     |      |      |      |Y*    |signal from local DBus object
 
-All properties marked as 'Y' is defined in DBus specification, which means:
-1. they are provided in message unmarshalled from socket data
-2. they must be provided in message object before marshalling and sending over the socket
+All properties marked as `Y`, `Y*`, or `O` (optional) are defined in DBus specification.
+
+All message objects unmarshalled from socket data have properties defined in spec, plus a `byteDecoded` indicating messag size.
+
+All message objects prepared to be sent over socket before marshalling should have all properties defined in spec.
+
+Invoking a method requires `destination`, `path`, `interface`, `member`, and optional `signature` and `body`.
+
+For local object, the `destination` should be a falsy value. 
+
+, including `undefined`, `null` or empty string (''). The `sender` property MUST be left empty for the method may judge whether the invocation is from a remote entity or a local one.
+- 
+
+
+
+
+
+For interaction between user and DBus class, and 
 
 
 

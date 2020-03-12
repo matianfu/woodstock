@@ -749,7 +749,7 @@ class STRING extends BASIC_TYPE {
     } else if (value === undefined) {
       // empty
     } else {
-      throw new Error('value not a string')
+      throw new TypeError('value not a string')
     }
   }
 

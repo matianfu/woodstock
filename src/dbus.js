@@ -33,7 +33,7 @@ const debugSignal = Debug('dbus:signal')
  *
  * Providing a service includes the following steps:
  * - add interfaces by constructor or `addInterface` method.
- * - add implementations by constructor or `addImplementation` method.
+ * - add implementations by constructor or `addTemplate` method.
  * - add node, each node contains an object path and an implementation.
  *
  * DBus client stores a list of interface definitions internally. They
@@ -137,7 +137,7 @@ class DBus extends EventEmitter {
       if (!Array.isArray(opts.implementations)) {
         throw new TypeError('implementations not an array')
       }
-      opts.implementations.forEach(impl => this.addImplementation(impl))
+      opts.implementations.forEach(impl => this.addTemplate(impl))
     }
 
     /**
@@ -449,7 +449,7 @@ class DBus extends EventEmitter {
     const unwrap = r => (r === undefined || r instanceof TYPE) ? r : r.result
 
     if (!m.destination) m.destination = this.myName
-    if (!m.sender) m.sender = this.myName
+    // if (!m.sender) m.sender = this.myName
 
     if (m.destination === this.myName) {
       const node = this.nodes.find(m.path)

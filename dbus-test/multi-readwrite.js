@@ -65,7 +65,7 @@ describe(path.basename(__filename) +
 
   it('server add /hello should emit internal signal', done => {
     server.on('signal', s => {
-      expect(s.origin).to.equal(null)
+      expect(s.initiator).to.be.undefined
       expect(s.path).to.equal('/')
       expect(s.interface).to.equal('org.freedesktop.DBus.ObjectManager')
       expect(s.member).to.equal('InterfacesAdded')

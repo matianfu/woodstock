@@ -89,7 +89,7 @@ module.exports = {
     }
 
     // forbid Set on read-only property
-    if (def.access === 'read' && m.sender !== this.node.myName) {
+    if (def.access === 'read' && m.sender !== undefined) {
       const err = new Error('property is read-only')
       err.name = 'org.freedesktop.DBus.Error.PropertyReadOnly'
       throw err
@@ -118,10 +118,9 @@ module.exports = {
     interfaceName, 
     changedProperties, 
     invalidatedProperties = [],
-    m = { sender: null }
+    m = {}
   ) {
-    const s = {
-      initiator: m.sender,
+    const s = Object.assign({}, m.sender && { initiator: m.sender }, {
       path: this.node.path,
       interface: 'org.freedesktop.DBus.Properties',
       member: 'PropertiesChanged',
@@ -134,8 +133,7 @@ module.exports = {
           ]))),
         new ARRAY('as', invalidatedProperties.map(name => new STRING(name)))
       ],
-    }
-
+    })
     this.node.signal(s)
   }
 }

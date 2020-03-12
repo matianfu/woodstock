@@ -18,17 +18,11 @@ describe(path.basename(__filename) + ', local invoke', () => {
     server.addInterface(ReadWrite)
     server.addTemplate(PropertiesImpl)
 
-    server.addNode({
-      path: '/',
-      implementations: [
-        'org.freedesktop.DBus.Properties',
-        {
-          interface: 'com.example.readwrite',
-          Read: 'hello',
-          ReadWrite: 'world',
-          Update () { }
-        }
-      ]
+    server.addNode('/', 'org.freedesktop.DBus.Properties', {
+      interface: 'com.example.readwrite',
+      Read: 'hello',
+      ReadWrite: 'world',
+      Update () { }
     })
 
     server.on('connect', done)
@@ -229,17 +223,11 @@ describe(path.basename(__filename) + ', remote invoke', () => {
     server.addInterface(ReadWrite)
     server.addTemplate(PropertiesImpl)
 
-    server.addNode({
-      path: '/',
-      implementations: [
-        'org.freedesktop.DBus.Properties',
-        {
-          interface: 'com.example.readwrite',
-          Read: new STRING('hello'),
-          ReadWrite: new STRING('world'),
-          Update () {}
-        }
-      ]
+    server.addNode('/', 'org.freedesktop.DBus.Properties', {
+      interface: 'com.example.readwrite',
+      Read: new STRING('hello'),
+      ReadWrite: new STRING('world'),
+      Update () {}
     })
 
     server.on('connect', () => {
@@ -364,17 +352,11 @@ describe(path.basename(__filename) +
     server.addInterface(ReadWrite)
     server.addTemplate(PropertiesImpl)
 
-    server.addNode({
-      path: '/',
-      implementations: [
-        'org.freedesktop.DBus.Properties',
-        {
-          interface: 'com.example.readwrite',
-          Read: new STRING('hello'),
-          ReadWrite: new STRING('foo'),
-          Update () {}
-        }
-      ]
+    server.addNode('/', 'org.freedesktop.DBus.Properties', {
+      interface: 'com.example.readwrite',
+      Read: new STRING('hello'),
+      ReadWrite: new STRING('foo'),
+      Update () {}
     })
 
     server.on('connect', () => {
@@ -394,9 +376,9 @@ describe(path.basename(__filename) +
 
   it('Get Read should succeed', done =>
     client.Get({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'Read'
     }, (err, body) => {
       if (err) return done(err)
@@ -406,9 +388,9 @@ describe(path.basename(__filename) +
 
   it('Get Write should fail with UnknownProperty', done =>
     client.Get({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'Write'
     }, (err, body) => {
       expect(err).is.an('Error')
@@ -419,9 +401,9 @@ describe(path.basename(__filename) +
 
   it('Get ReadWrite should succeed', done =>
     client.Get({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'ReadWrite'
     }, (err, body) => {
       if (err) return done(err)
@@ -431,8 +413,8 @@ describe(path.basename(__filename) +
 
   it('GetAll should return Read and ReadWrite but no Write', done =>
     client.GetAll({
-      destination: server.myName, 
-      path: '/', 
+      destination: server.myName,
+      path: '/',
       interfaceName: 'com.example.readwrite'
     }, (err, body) => {
       if (err) return done(err)
@@ -453,9 +435,9 @@ describe(path.basename(__filename) +
 
   it('Set Read should fail with PropertyReadOnly', done =>
     client.Set({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'Read',
       value: new STRING('bar')
     }, (err, body) => {
@@ -467,9 +449,9 @@ describe(path.basename(__filename) +
 
   it('Set Write to "bar" should failed with UnknownProperty', done =>
     client.Set({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'Write',
       value: new STRING('bar')
     }, (err, body) => {
@@ -479,11 +461,11 @@ describe(path.basename(__filename) +
       done()
     }))
 
-  it('Set ReadWrite to BYTE should fail with InvalidSignature', done => 
+  it('Set ReadWrite to BYTE should fail with InvalidSignature', done =>
     client.Set({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'ReadWrite',
       value: new BYTE(2)
     }, (err, body) => {
@@ -495,9 +477,9 @@ describe(path.basename(__filename) +
 
   it('Set ReadWrite to "bar" should succeed', done =>
     client.Set({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'ReadWrite',
       value: new STRING('bar')
     }, (err, body) => {
@@ -508,17 +490,17 @@ describe(path.basename(__filename) +
 
   it('Set ReadWrite to "bar" and read back should be "bar"', done =>
     client.Set({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'ReadWrite',
       value: new STRING('bar')
     }, (err, body) => {
       if (err) return done(err)
       client.Get({
-        destination: server.myName, 
-        path: '/', 
-        interfaceName: 'com.example.readwrite', 
+        destination: server.myName,
+        path: '/',
+        interfaceName: 'com.example.readwrite',
         propertyName: 'ReadWrite'
       }, (err, body) => {
         expect(err).to.equal(null)
@@ -529,9 +511,9 @@ describe(path.basename(__filename) +
 
   it('Set ReadWrite to "bar" should emit signal on server', done => {
     client.Set({
-      destination: server.myName, 
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      destination: server.myName,
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'ReadWrite',
       value: new STRING('bar')
     }, (err, body) => { })
@@ -566,9 +548,9 @@ describe(path.basename(__filename) +
       if (err) return done(err)
 
       client.Set({
-        destination: server.myName, 
-        path: '/', 
-        interfaceName: 'com.example.readwrite', 
+        destination: server.myName,
+        path: '/',
+        interfaceName: 'com.example.readwrite',
         propertyName: 'ReadWrite',
         value: new STRING('bar')
       }, (err, body) => { })

@@ -2,7 +2,7 @@ const path = require('path')
 const expect = require('chai').expect
 
 const {
-  LITTLE, BIG, 
+  LITTLE, BIG,
   TYPE, BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64,
   DOUBLE, UNIX_FD, STRING, OBJECT_PATH, SIGNATURE, ARRAY, STRUCT,
   DICT_ENTRY, VARIANT
@@ -15,13 +15,13 @@ describe(path.basename(__filename), () => {
     throw 'not implemented'
   })
 
-  it('INT32 constructed without value should have no value', () => 
+  it('INT32 constructed without value should have no value', () =>
     expect(Object.prototype.hasOwnProperty(new INT32(), 'value')).to.equal(false))
 
-  it('Constructing INT32 with true should throw TypeError', () => 
+  it('Constructing INT32 with true should throw TypeError', () =>
     expect(() => new INT32(true)).to.throw(TypeError))
 
-  it('Constructing INT32 with 1.1 should throw TypeError', () => 
+  it('Constructing INT32 with 1.1 should throw TypeError', () =>
     expect(() => new INT32(1.1)).to.throw(TypeError))
 
   it('Constructing INT32 with 0', () => expect(new INT32(0).value).to.equal(0))

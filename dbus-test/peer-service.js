@@ -9,14 +9,13 @@ const Peer = require('src/interfaces/org.freedesktop.DBus.Peer.js')
 const PeerImpl = require('src/templates/org.freedesktop.DBus.Peer.js')
 
 describe(path.basename(__filename), () => {
-
   let server, client
 
   beforeEach(done => {
     server = new DBus()
     server.addInterface(Peer)
     server.addTemplate(PeerImpl)
-    server.addNode({ path: '/', implementations: ['org.freedesktop.DBus.Peer'] })
+    server.addNode('/', 'org.freedesktop.DBus.Peer')
 
     server.on('connect', () => {
       if (client.connected) done()
@@ -28,14 +27,14 @@ describe(path.basename(__filename), () => {
     })
   })
 
-  afterEach(() => { 
-    server.end()        
+  afterEach(() => {
+    server.end()
     client.end()
   })
 
-  it.skip('Ping should return nothing', done => 
+  it.skip('Ping should return nothing', done =>
     client.Ping(server.myName, (err, body) => {
-      expect(err).to.equal(null)  
+      expect(err).to.equal(null)
       expect(body).to.equal(undefined)
       done()
     }))
@@ -54,7 +53,3 @@ describe(path.basename(__filename), () => {
       done()
     }))
 })
-
-
-
-

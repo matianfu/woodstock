@@ -18,17 +18,11 @@ describe(path.basename(__filename) + ', local invoke', () => {
     server.addInterface(ReadWrite)
     server.addTemplate(PropertiesImpl)
 
-    server.addNode({
-      path: '/',
-      implementations: [
-        'org.freedesktop.DBus.Properties',
-        {
-          interface: 'com.example.readwrite',
-          Read: 'hello',
-          ReadWrite: 'world',
-          Update () { }
-        }
-      ]
+    server.addNode('/', 'org.freedesktop.DBus.Properties', {
+      interface: 'com.example.readwrite',
+      Read: 'hello',
+      ReadWrite: 'world',
+      Update () { }
     })
 
     server.on('connect', () => client.connected && done())
@@ -117,15 +111,15 @@ describe(path.basename(__filename) + ', local invoke', () => {
 
   it('Set Read (sync) with STRING should succeed', () => {
     server.Set({
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
-      propertyName: 'Read', 
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Read',
       value: new STRING('foo')
     })
 
     const r = server.Get({
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
+      path: '/',
+      interfaceName: 'com.example.readwrite',
       propertyName: 'Read'
     })
 
@@ -153,9 +147,9 @@ describe(path.basename(__filename) + ', local invoke', () => {
     })
 
     server.Set({
-      path: '/', 
-      interfaceName: 'com.example.readwrite', 
-      propertyName: 'Read', 
+      path: '/',
+      interfaceName: 'com.example.readwrite',
+      propertyName: 'Read',
       value: new STRING('foo')
     })
   })
@@ -170,9 +164,9 @@ describe(path.basename(__filename) + ', local invoke', () => {
     }, err => {
       expect(err).to.equal(null)
       server.Set({
-        path: '/', 
-        interfaceName: 'com.example.readwrite', 
-        propertyName: 'Read', 
+        path: '/',
+        interfaceName: 'com.example.readwrite',
+        propertyName: 'Read',
         value: new STRING('foo')
       })
     })

@@ -6,8 +6,8 @@ const EventEmitter = require('events')
  *
  * Tree maintains the object hierarchy and provides retriev, add, and remove methods.
  * Tree also emits node added and removed events for observers.
- * 
- * Internally, Tree use an array to store nodes, but this should not be visible 
+ *
+ * Internally, Tree use an array to store nodes, but this should not be visible
  * to external components.
  */
 class Nodes extends EventEmitter {
@@ -32,7 +32,7 @@ class Nodes extends EventEmitter {
   }
 
   find (path) {
-    return this.nodes.find(n => n.path === path) 
+    return this.nodes.find(n => n.path === path)
   }
 
   add (objectPath, node) {
@@ -63,7 +63,7 @@ class Nodes extends EventEmitter {
       if (a.path > b.path) return 1
       return 0
     })
-    node.nodes = this    
+    node.nodes = this
     this.emit('added', node)
   }
 

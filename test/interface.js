@@ -132,10 +132,10 @@ describe(path.basename(__filename) + ', normalizeMethod()', () => {
     done()
   })
 
-  it('TypeError "method optional not a boolean" if optional is "hello"', 
+  it('TypeError "method optional not a boolean" if optional is "hello"',
     done => {
       const f = () => normalizeMethod({ name: 'hello', optional: 'hello' })
-      expect(f).to.throw(TypeError, 'method optional not a boolean') 
+      expect(f).to.throw(TypeError, 'method optional not a boolean')
       done()
     })
 
@@ -146,7 +146,7 @@ describe(path.basename(__filename) + ', normalizeMethod()', () => {
         { type: 'ay', direction: 'in' },
         { type: 'ay', direction: 'out' }
       ],
-      optional: true 
+      optional: true
     }))).to.deep.equal({
       name: 'hello',
       args: [
@@ -386,7 +386,7 @@ describe(path.basename(__filename) + ', normalize()', () => {
     done()
   })
 
-  it('RangeError "interface name not defined" if interface has no name', 
+  it('RangeError "interface name not defined" if interface has no name',
     done => {
       const f = () => normalize({})
       expect(f).to.throw(RangeError, 'interface name not defined')
@@ -412,10 +412,10 @@ describe(path.basename(__filename) + ', normalize()', () => {
   })
 
   it('RangeError "interface members have duplicate name"', done => {
-    const f = () => normalize({ 
+    const f = () => normalize({
       name: 'a',
-      methods: [ { name: 'Hello' } ],
-      properties: [ { name: 'Hello', type: 'ay', access: 'read' } ]
+      methods: [{ name: 'Hello' }],
+      properties: [{ name: 'Hello', type: 'ay', access: 'read' }]
     })
 
     expect(f).to.throw(RangeError, 'interface members have duplicate name')
@@ -424,7 +424,7 @@ describe(path.basename(__filename) + ', normalize()', () => {
 
   it('should normalize an empty interface definition', done => {
     expect(normalize({
-      name: 'hello',
+      name: 'hello'
     })).to.deep.equal({
       name: 'hello',
       methods: [],

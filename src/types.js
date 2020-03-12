@@ -25,7 +25,6 @@ const print = buf => {
   }
 }
 
-
 /**
 This module defines all classes for DBus data types.
 
@@ -875,7 +874,7 @@ class SIGNATURE extends STRING {
  * However, this makes code tedious and unreadable. So mixing JavaScript type
  * DBus TYPE is allowed. Elements of JavaScript type could be primitive type
  * or an array for containers. Other data types are not allowed.
- * 
+ *
  */
 class CONTAINER extends TYPE {
   /**
@@ -1029,7 +1028,7 @@ class ARRAY extends CONTAINER {
 
   /**
    * Adds a new element into array
-   * 
+   *
    * @param {TYPE} elem - elem should be a TYPE object. If not, this function
    * will construct a TYPE object with esig and elem.
    */
@@ -1051,11 +1050,11 @@ class ARRAY extends CONTAINER {
   eval () {
     if (this.esig[0] === '{') {
       if ('sog'.includes(this.esig[1])) { // string like key
-        return this.elems.reduce((o, dentry) => 
+        return this.elems.reduce((o, dentry) =>
           Object.assign(o, {
             [dentry.elems[0].eval()]: dentry.elems[1].eval()
           }), {})
-      } else {  // other basic type 
+      } else { // other basic type
         return new Map(super.eval())
       }
     } else {
@@ -1233,8 +1232,8 @@ class VARIANT extends CONTAINER {
       throw Error('stack')
     }
     return value
-/**
-    return { 
+    /**
+    return {
       signature: this.elems[0].eval(),
       value: this.elems[1].eval()
     }
@@ -1263,9 +1262,28 @@ assign(DICT_ENTRY, { code: '{', align: 8, bra: '{', ket: '}' })
 assign(VARIANT, { code: 'v', align: 1 })
 
 module.exports = {
-  LITTLE, BIG, POW32, POW64,
-  TYPE, BASIC_TYPE, CONTAINER,
-  BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64, DOUBLE, UNIX_FD,
-  STRING, OBJECT_PATH, SIGNATURE,
-  ARRAY, STRUCT, DICT_ENTRY, VARIANT
+  LITTLE,
+  BIG,
+  POW32,
+  POW64,
+  TYPE,
+  BASIC_TYPE,
+  CONTAINER,
+  BYTE,
+  BOOLEAN,
+  INT16,
+  UINT16,
+  INT32,
+  UINT32,
+  INT64,
+  UINT64,
+  DOUBLE,
+  UNIX_FD,
+  STRING,
+  OBJECT_PATH,
+  SIGNATURE,
+  ARRAY,
+  STRUCT,
+  DICT_ENTRY,
+  VARIANT
 }

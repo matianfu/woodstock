@@ -2,7 +2,7 @@ const path = require('path')
 const expect = require('chai').expect
 
 const {
-  LITTLE, BIG, 
+  LITTLE, BIG,
   TYPE, BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64,
   DOUBLE, UNIX_FD, STRING, OBJECT_PATH, SIGNATURE, ARRAY, STRUCT,
   DICT_ENTRY, VARIANT
@@ -19,8 +19,8 @@ const print = buf => {
 
 /**
  * A Signal message from NetworkManager
- * 
- * The message has an empty signature field and ever crashed the 
+ *
+ * The message has an empty signature field and ever crashed the
  * unmarshalling.
  *
  * ```
@@ -47,22 +47,17 @@ const msg001 = `
 `
 
 const hex = msg => msg.split('\n')
-                      .map(l => l.trim())
-                      .filter(l => !!l.length)
-                      .map(l => l.slice(8, -1).split(' ').join(''))
-                      .join('')
-
-
+  .map(l => l.trim())
+  .filter(l => !!l.length)
+  .map(l => l.slice(8, -1).split(' ').join(''))
+  .join('')
 
 describe(path.basename(__filename), () => {
-
   it('unmarshal msg001 (empty signature string allowed)', () => {
     const data = Buffer.from(hex(msg001), 'hex')
-    const arr = new ARRAY('a{yv}') 
+    const arr = new ARRAY('a{yv}')
     arr.unmarshal(data, 12, true)
     const v = arr.eval()
     expect(v.get(8)).to.equal('')
   })
 })
-
-

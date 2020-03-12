@@ -4,8 +4,7 @@ const expect = require('chai').expect
 const { split } = require('src/signature')
 
 describe(path.basename(__filename), () => {
-
-  it('split "a" should throw RangeError', () => 
+  it('split "a" should throw RangeError', () =>
     expect(() => split('a')).to.throw(RangeError))
 
   it('oa{sv}', done => {

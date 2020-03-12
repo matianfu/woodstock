@@ -2,7 +2,7 @@ const path = require('path')
 const expect = require('chai').expect
 
 const {
-  LITTLE, BIG, 
+  LITTLE, BIG,
   TYPE, BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64,
   DOUBLE, UNIX_FD, STRING, OBJECT_PATH, SIGNATURE, ARRAY, STRUCT,
   DICT_ENTRY, VARIANT
@@ -22,7 +22,7 @@ describe(path.basename(__filename), () => {
     done()
   })
 
-  it('constructing INT16 with true should throw TypeError', () => 
+  it('constructing INT16 with true should throw TypeError', () =>
     expect(() => new INT16(true)).to.throw(TypeError))
 
   it('constructing INT16 with 0', done => {
@@ -54,8 +54,7 @@ describe(path.basename(__filename), () => {
 /**
   it('marshalling and unmarshalling 12234', () => {
     const i0 = new INT16(12234)
-    const len = i0.marshal(null, 0, true) 
-  }) 
+    const len = i0.marshal(null, 0, true)
+  })
 */
 })
-

@@ -1,7 +1,6 @@
-const { TYPE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types') 
+const { TYPE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../types')
 
-
-/** 
+/**
  * Implements `org.freedesktop.DBus.ObjectManager`
  *
  * ```
@@ -9,7 +8,7 @@ const { TYPE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT } = require('../ty
  *   DICT<OBJPATH,DICT<STRING,DICT<STRING,VARIANT>>> objpath_interfaces_and_properties);
  * ```
  *
- * @module OmTemplate 
+ * @module OmTemplate
  */
 module.exports = {
   /**
@@ -17,7 +16,7 @@ module.exports = {
    */
   interface: 'org.freedesktop.DBus.ObjectManager',
 
-  /** 
+  /**
    * GetManagedObjects returns all **proper** children.
    *
    * > from DBus Specification:
@@ -54,7 +53,7 @@ module.exports = {
         if (props.length) {
           ifaces.push(new DICT_ENTRY([
             new STRING(ifaceName),
-            new ARRAY(props) 
+            new ARRAY(props)
           ]))
         } else {
           ifaces.push(new DICT_ENTRY([
@@ -67,12 +66,12 @@ module.exports = {
       if (ifaces.length) {
         nodes.push(new DICT_ENTRY([
           new OBJECT_PATH(node.path),
-          new ARRAY(ifaces) 
+          new ARRAY(ifaces)
         ]))
       }
     })
 
-    //return new ARRAY(nodes, 'a{oa{sa{sv}}}')
+    // return new ARRAY(nodes, 'a{oa{sa{sv}}}')
     return new ARRAY('a{oa{sa{sv}}}', nodes)
   },
 
@@ -89,39 +88,39 @@ module.exports = {
      */
 
     if (!this.nodes.hasProperChild(this.node, node)) return
-      const ifaces = []
-      node.implementations.forEach(impl => {
-        const ifaceName = impl.interface.name  
-        const props = []
-        impl.interface.properties.forEach(p => {
-          const prop = impl[p.name]
-          if (prop instanceof TYPE && prop.signature() === p.type) {
-            props.push(new DICT_ENTRY([
-              new STRING(p.name),
-              new VARIANT(prop)
-            ]))
-          }
-        })
-
-        ifaces.push(new DICT_ENTRY([
-          new STRING(ifaceName), 
-          new ARRAY('a{sv}', props)
-        ]))
+    const ifaces = []
+    node.implementations.forEach(impl => {
+      const ifaceName = impl.interface.name
+      const props = []
+      impl.interface.properties.forEach(p => {
+        const prop = impl[p.name]
+        if (prop instanceof TYPE && prop.signature() === p.type) {
+          props.push(new DICT_ENTRY([
+            new STRING(p.name),
+            new VARIANT(prop)
+          ]))
+        }
       })
 
-      const ifacesAndProps = new ARRAY('a{sa{sv}}', ifaces)
+      ifaces.push(new DICT_ENTRY([
+        new STRING(ifaceName),
+        new ARRAY('a{sv}', props)
+      ]))
+    })
 
-      this.node.signal({
-        path: this.node.path,
-        interface: 'org.freedesktop.DBus.ObjectManager',
-        member: 'InterfacesAdded',
-        body: [new OBJECT_PATH(node.path), ifacesAndProps]
-      })
+    const ifacesAndProps = new ARRAY('a{sa{sv}}', ifaces)
+
+    this.node.signal({
+      path: this.node.path,
+      interface: 'org.freedesktop.DBus.ObjectManager',
+      member: 'InterfacesAdded',
+      body: [new OBJECT_PATH(node.path), ifacesAndProps]
+    })
   },
 
   /**
    * listens to node removed event and emits `InterfacesRemoved` signal
-   * 
+   *
    * @param {object} node
    */
   nodeRemoved (node) {
@@ -139,12 +138,12 @@ module.exports = {
 
   /**
    * Setter function for `this.nodes`
-   * 
+   *
    * `node` and `nodes` has mutual references, which are established when
-   * a `node` is added to `nodes`. `node` will populate `nodes` property to 
+   * a `node` is added to `nodes`. `node` will populate `nodes` property to
    * all implementations. As a setter, we have a chance to hook event listeners
    * onto `nodes`.
-   * 
+   *
    * @param {object} value
    */
   set nodes (value) {
@@ -163,4 +162,3 @@ module.exports = {
     }
   }
 }
-

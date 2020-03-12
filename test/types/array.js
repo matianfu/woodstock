@@ -1,8 +1,8 @@
 const path = require('path')
-const expect = require('chai').expect 
+const expect = require('chai').expect
 
 const {
-  LITTLE, BIG, 
+  LITTLE, BIG,
   TYPE, BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64,
   DOUBLE, UNIX_FD, STRING, OBJECT_PATH, SIGNATURE, ARRAY, STRUCT,
   DICT_ENTRY, VARIANT
@@ -16,9 +16,9 @@ describe(path.basename(__filename), () => {
   })
 
   it('Constructing an ARRAY with true should throw TypeError', () =>
-    expect(() => new ARRAY(true)).to.throw(TypeError)) 
+    expect(() => new ARRAY(true)).to.throw(TypeError))
 
-  it('Constructing an ARRAY with "true" should throw RangeError', () => 
+  it('Constructing an ARRAY with "true" should throw RangeError', () =>
     expect(() => new ARRAY('true')).to.throw(RangeError))
 
   it('Constructing an ARRAY with "ao" should succeed', () => {
@@ -35,7 +35,7 @@ describe(path.basename(__filename), () => {
   it('Constructing an ARRAY with "aoo" shold throw RangeError', () =>
     expect(() => new ARRAY('aoo')).to.throw(RangeError))
 
-  it('Constructing an ARRAY with empty array should throw Error', () => 
+  it('Constructing an ARRAY with empty array should throw Error', () =>
     expect(() => new ARRAY([])).to.throw(Error))
 
   it('Constructing an ARRAY with different TYPE should throw Error', () =>
@@ -52,10 +52,10 @@ describe(path.basename(__filename), () => {
     expect(arr.elems[1].value).to.equal('bar')
   })
 
-  it('STRING ARRAY should eval to number array', () =>  {
+  it('STRING ARRAY should eval to number array', () => {
     const arr = new ARRAY('as', [new STRING('foo'), new STRING('bar')])
     expect(arr.eval()).to.deep.equal(['foo', 'bar'])
-  }) 
+  })
 
   it('DICT with string key should eval to JavaScript object', () => {
     const arr = new ARRAY([

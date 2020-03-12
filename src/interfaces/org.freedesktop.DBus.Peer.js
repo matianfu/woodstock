@@ -11,7 +11,7 @@ module.exports = {
     },
     {
       name: 'GetMachineId',
-      args: [ { name: 'machine_id', type: 's', direction: 'out' } ]
+      args: [{ name: 'machine_id', type: 's', direction: 'out' }]
     }
   ]
-} 
+}

@@ -3,8 +3,8 @@ const path = require('path')
 const chai = require('chai')
 const expect = chai.expect
 
-const { 
-  BYTE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT 
+const {
+  BYTE, STRING, OBJECT_PATH, ARRAY, DICT_ENTRY, VARIANT
 } = require('src/types')
 
 const DBus = require('src/dbus')
@@ -17,7 +17,6 @@ const ReadWrite = require('src/interfaces/com.example.readwrite')
 describe(path.basename(__filename) +
   ', test org.freedesktop.DBus.ObjectManager implementation' +
   ' using custom readwrite interface', () => {
-
   let client, server
 
   // set up client and server
@@ -29,13 +28,9 @@ describe(path.basename(__filename) +
     server.addTemplate(PropertiesImpl)
     server.addTemplate(OmImpl)
 
-    server.addNode({
-      path: '/',
-      implementations: [
-        'org.freedesktop.DBus.Properties',
-        'org.freedesktop.DBus.ObjectManager'
-      ]
-    })
+    server.addNode('/',
+      'org.freedesktop.DBus.Properties',
+      'org.freedesktop.DBus.ObjectManager')
 
     server.on('connect', () => {
       if (client.connected) done()
@@ -54,8 +49,8 @@ describe(path.basename(__filename) +
 
   it('empty dict if no children', done => {
     client.GetManagedObjects({
-      destination: server.myName, 
-      path: '/' 
+      destination: server.myName,
+      path: '/'
     }, (err, body) => {
       expect(err).to.equal(null)
       expect(body).to.deep.equal([new ARRAY('a{oa{sa{sv}}}')])
@@ -89,21 +84,15 @@ describe(path.basename(__filename) +
               ])
             ])
           ])
-        ])  
+        ])
       ])
       done()
     })
-    server.addNode({
-      path: '/hello',
-      implementations: [
-        'org.freedesktop.DBus.Properties',
-        {
-          interface: 'com.example.readwrite',
-          Read: new STRING('hello'),
-          ReadWrite: new STRING('foo'),
-          Update () {}
-        }
-      ]
+    server.addNode('/hello', 'org.freedesktop.DBus.Properties', {
+      interface: 'com.example.readwrite',
+      Read: new STRING('hello'),
+      ReadWrite: new STRING('foo'),
+      Update () {}
     })
   })
 
@@ -112,7 +101,7 @@ describe(path.basename(__filename) +
       type: 'signal',
       sender: server.myName,
       interface: 'org.freedesktop.DBus.ObjectManager',
-      path_namespace: '/' 
+      path_namespace: '/'
     }, err => {
       if (err) return done(err)
 
@@ -142,22 +131,15 @@ describe(path.basename(__filename) +
                 ])
               ])
             ])
-          ])  
+          ])
         ])
         done()
       })
-
-      server.addNode({
-        path: '/hello',
-        implementations: [
-          'org.freedesktop.DBus.Properties',
-          {
-            interface: 'com.example.readwrite',
-            Read: new STRING('hello'),
-            ReadWrite: new STRING('foo'),
-            Update () {}
-          }
-        ]
+      server.addNode('/hello', 'org.freedesktop.DBus.Properties', {
+        interface: 'com.example.readwrite',
+        Read: new STRING('hello'),
+        ReadWrite: new STRING('foo'),
+        Update () {}
       })
     })
   })

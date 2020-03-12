@@ -4,16 +4,16 @@ const { STRING } = require('../types')
  * @module PeerTemplate
  */
 module.exports = {
-  /** 
-   * interface name 
+  /**
+   * interface name
    */
   interface: 'org.freedesktop.DBus.Peer',
 
   /**
    * Ping
-   */ 
+   */
   Ping (m) {
-    return
+
   },
 
   /**
@@ -23,4 +23,4 @@ module.exports = {
   GetMachineId (m) {
     return STRING.from(this.node.machineId)
   }
-} 
+}

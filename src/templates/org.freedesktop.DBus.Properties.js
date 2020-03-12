@@ -2,7 +2,7 @@ const { TYPE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('../types')
 
 /**
  * Implements `org.freedesktop.DBus.Properties` interface
- * 
+ *
  * @module PropertiesTemplate
  */
 module.exports = {
@@ -14,7 +14,7 @@ module.exports = {
     const impl = this.node.implementations.find(impl => impl.interface.name === name)
     if (!impl) {
       const e = new Error('unknown interface')
-      e.name = 'org.freedesktop.DBus.Error.UnknownInterface' 
+      e.name = 'org.freedesktop.DBus.Error.UnknownInterface'
       throw e
     }
 
@@ -23,7 +23,7 @@ module.exports = {
 
   /**
    * Get Property
-   * 
+   *
    * @param {object} m - message
    */
   Get (m) {
@@ -43,18 +43,18 @@ module.exports = {
       throw new Error('not a TYPE object')
     }
 
-    return new VARIANT(prop) 
+    return new VARIANT(prop)
   },
 
   /**
    * Get all properties on given interface
    *
-   * @param {object} m - message 
+   * @param {object} m - message
    */
   GetAll (m) {
     const iname = m.body[0].value
     const impl = this.getImplementation(iname)
-   
+
     const arr = impl
       .interface
       .properties
@@ -115,8 +115,8 @@ module.exports = {
    * @param {object} trigger
    */
   signal (
-    interfaceName, 
-    changedProperties, 
+    interfaceName,
+    changedProperties,
     invalidatedProperties = [],
     m = {}
   ) {
@@ -132,7 +132,7 @@ module.exports = {
             new VARIANT(changedProperties[name])
           ]))),
         new ARRAY('as', invalidatedProperties.map(name => new STRING(name)))
-      ],
+      ]
     })
     this.node.signal(s)
   }

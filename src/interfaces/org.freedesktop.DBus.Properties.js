@@ -20,7 +20,7 @@
  *     DICT<STRING,VARIANT> changed_properties,
  *     ARRAY<STRING> invalidated_properties);
  * ```
- * 
+ *
  * @module PropertiesInterface
  */
 module.exports = {
@@ -61,4 +61,3 @@ module.exports = {
     }
   ]
 }
-

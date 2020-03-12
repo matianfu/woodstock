@@ -251,7 +251,7 @@ class DBus extends EventEmitter {
                 }
               })
 
-/*
+              /*
               this.invoke({
               }, (err, body) => {
               })
@@ -348,13 +348,12 @@ class DBus extends EventEmitter {
           this.methodReturn(m, result)
 
           if (typeof result === 'object' && !(result instanceof TYPE)) {
-            out = result.result    
+            out = result.result
           } else {
             out = result
           }
 
           if (out instanceof TYPE) out = out.eval()
-
         }
 
         debugRemoteMethod(m, err || out)
@@ -407,7 +406,6 @@ class DBus extends EventEmitter {
    * @param {object} s - signal
    */
   relaySignal (s) {
-
     debugSignal(Object.assign({}, s, s.body && { body: s.body.map(arg => arg.eval()) }))
 
     if (!this.connected) return
@@ -618,7 +616,7 @@ class DBus extends EventEmitter {
    * @param {string} opts.path - object path
    * @param {Array<string|object>} opts.implementations - an array of implementation objects
    */
-  addNode ({ path, implementations }) {
+  addNode (path, ...implementations) {
     const node = new Node(implementations, this.interfaces, this.templates)
     this.nodes.add(path, node)
     Object.defineProperty(node, 'machineId', { get: () => this.machineId })

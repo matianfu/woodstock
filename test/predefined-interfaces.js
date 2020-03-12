@@ -3,7 +3,7 @@ const path = require('path')
 const chai = require('chai')
 const expect = chai.expect
 
-const normalize = require('src/interface') 
+const normalize = require('src/interface')
 const ifaces = require('src/interfaces')
 const validate = require('src/templates')
 
@@ -28,4 +28,3 @@ describe(path.basename(__filename), () => {
     done()
   })
 })
-

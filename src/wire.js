@@ -50,7 +50,6 @@ const {
  * @module wire
  */
 
-
 /**
  * Converts type string to type code
  *
@@ -132,7 +131,6 @@ const encodeFlags = flags => {
   return x
 }
 
-
 /**
  * Decodes a flags code to Flags object
  *
@@ -156,7 +154,7 @@ const decodeFlags = code => {
  *
  * @param {number} key - field number 1-9, see DBus Specification
  * @returns {STRUCT} encoded header field
- * @throws {TypeError} key is not an integer or the value type 
+ * @throws {TypeError} key is not an integer or the value type
  *                     does not match the key
  * @throws {RangeError} key value is out of range
  */
@@ -317,10 +315,10 @@ const encode = (m, serial, name = '') => {
  * @property {string} interface - interface name
  * @property {string} member - method or signal name
  * @property {string} errorName - error name
- * @property {number} replySerial - serial in error or method return 
+ * @property {number} replySerial - serial in error or method return
  * @property {string} destination - destination name
  * @property {string} sender - sender name
- * @property {string} [signature] - body signature 
+ * @property {string} [signature] - body signature
  * @property {number} unixFds - unix file descriptor
  * @property {TYPE[]} [body] - body is an array of TYPE object
  * @property {number} bytesDecoded - decoded message length

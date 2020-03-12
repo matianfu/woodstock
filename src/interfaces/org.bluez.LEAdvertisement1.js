@@ -1,17 +1,17 @@
 /**
- * ### Service		
+ * ### Service
  *
  * org.bluez
  *
- * ### Interface	
+ * ### Interface
  *
  * org.bluez.LEAdvertisement1
  *
- * ### Object path	
+ * ### Object path
  *
  * freely definable
  *
- * ## Methods		
+ * ## Methods
  *
  * ### `void Release() [noreply]`
  *
@@ -22,12 +22,12 @@
  * called it has already been unregistered.
  *
  * ## Properties
- * 
+ *
  * ### `string Type`
  *
  * Determines the type of advertising packet requested.
  *
- * Possible values: 
+ * Possible values:
  * - "broadcast"
  * - "peripheral"
  *
@@ -60,7 +60,7 @@
  * Possible values:
  * - `<type> <byte array>`
  * - ...
- * 
+ *
  * Example:
  * ```
  * <Transport Discovery> <Organization Flags...>
@@ -116,7 +116,7 @@
  * Secondary channel to be used. Primary channel is
  * always set to "1M" except when "Coded" is set.
  *
- * Possible value: 
+ * Possible value:
  * - "1M" (default)
  * - "2M"
  * - "Coded"
@@ -142,12 +142,12 @@
  *         properties['LocalName'] = dbus.String(self.local_name)
  *     if self.include_tx_power is not None:
  *         properties['IncludeTxPower'] = dbus.Boolean(self.include_tx_power)
- * 
+ *
  *     if self.data is not None:
  *         properties['Data'] = dbus.Dictionary(self.data, signature='yv')
  *     return {LE_ADVERTISEMENT_IFACE: properties}
  * ```
- * 
+ *
  * @module LEAdvertisement1
  */
 module.exports = {
@@ -160,85 +160,85 @@ module.exports = {
   ],
   properties: [
     {
-      name: 'Type', 
-      type: 's',                // string, "broadcast" or "peripheral"
-      access: 'read',
+      name: 'Type',
+      type: 's', // string, "broadcast" or "peripheral"
+      access: 'read'
     },
     {
       name: 'ServiceUUIDs',
-      type: 'as',               // array{string}
+      type: 'as', // array{string}
       access: 'read',
       optional: true
     },
     {
       name: 'ManufacturerData',
-      type: 'a{qv}',            // DICT, 0xffff, byte array
+      type: 'a{qv}', // DICT, 0xffff, byte array
       access: 'read',
       optional: true
     },
     {
       name: 'SolicitUUIDs',
-      type: 'as',               // array{string}
+      type: 'as', // array{string}
       access: 'read',
       optional: true
     },
     {
       name: 'ServiceData',
-      type: 'a{sv}',            // DICT, see offiial example
+      type: 'a{sv}', // DICT, see offiial example
       access: 'read',
       optional: true
     },
     {
       name: 'Data',
-      type: 'a{yv}',            // DICT, see official example
+      type: 'a{yv}', // DICT, see official example
       access: 'read',
       optional: true
     },
     {
       name: 'Discoverable',
-      type: 'b',                // boolean
+      type: 'b', // boolean
       access: 'read',
       optional: true
     },
     {
       name: 'DiscoverableTimeout',
-      type: 'q',                // uint16
+      type: 'q', // uint16
       access: 'read',
       optional: true
     },
     {
       name: 'Includes',
-      type: 'as',               // array{string}
+      type: 'as', // array{string}
       access: 'read',
       optional: true
     },
     {
       name: 'LocalName',
-      type: 's',                // string
+      type: 's', // string
       access: 'read',
       optional: true
     },
     {
       name: 'Appearance',
-      type: 'q',                // uint16
+      type: 'q', // uint16
       access: 'read',
       optional: true
     },
     {
       name: 'Duration',
-      type: 'q',                // uint16
+      type: 'q', // uint16
       access: 'read',
       optional: true
     },
     {
       name: 'Timeout',
-      type: 'q',                // uint16 
+      type: 'q', // uint16
       access: 'read',
       optional: true
     },
     {
       name: 'SecondaryChannel',
-      type: 's',                // string
+      type: 's', // string
       access: 'read',
       optional: true
     }

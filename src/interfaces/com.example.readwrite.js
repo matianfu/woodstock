@@ -10,20 +10,20 @@ module.exports = {
       name: 'Update',
       args: [
         { name: 'name', type: 's', direction: 'in' },
-        { name: 'value', type: 's', direction: 'in' },
-      ],
-    },
+        { name: 'value', type: 's', direction: 'in' }
+      ]
+    }
   ],
   properties: [
     {
       name: 'Read',
       type: 's',
-      access: 'read',
+      access: 'read'
     },
     {
       name: 'ReadWrite',
       type: 's',
       access: 'readwrite'
     }
-  ],
+  ]
 }

@@ -6,7 +6,6 @@ const validateImpl = require('./implementation')
 const PropertiesImpl = require('./templates/org.freedesktop.DBus.Properties')
 const OmImpl = require('./templates/org.freedesktop.DBus.ObjectManager')
 
-
 /**
  * A DBus method may returns `undefined` or a TYPE object. For debugging,
  * the result could also be wrapped into a JavaScript object with debug options
@@ -16,12 +15,12 @@ const OmImpl = require('./templates/org.freedesktop.DBus.ObjectManager')
 
 /**
  * Node represents a DBus object with object path.
- * 
+ *
  * This class is used internally by dbus client. The user should
  * not construct a Node object directly. It should use
- * `addNode` method on DBus instead and provide an object path 
+ * `addNode` method on DBus instead and provide an object path
  * and a list of implementations.
- *  
+ *
  * This class encapsulates a set of methods to be used by DBus object.
  */
 class Node {
@@ -73,14 +72,14 @@ class Node {
           throw new Error(`interface definition for "${impl.interface}" not found`)
         }
 
-        validateImpl(iface, impl) 
+        validateImpl(iface, impl)
 
-        impl.interface = iface 
+        impl.interface = iface
       } else {
         throw new TypeError('implementation not an object or a string')
       }
 
-      impl.node = this 
+      impl.node = this
       this.implementations.push(impl)
     })
 
@@ -97,7 +96,7 @@ class Node {
     const impl = this
       .node
       .implementations
-      .find(impl => impl.interface.name === interfaceName) 
+      .find(impl => impl.interface.name === interfaceName)
 
     if (!impl) {
       throw 'something'
@@ -113,7 +112,7 @@ class Node {
    * @param {string} [m.signature] - argument types
    * @param {TYPE[]} [m.body] - arguments
    */
-/**
+  /**
   async Method (m) {
     const impl = this.implementations.find(i => i.interface.name === m.interface)
     if (!impl) {
@@ -142,7 +141,7 @@ class Node {
       throw 'something'
     }
 
-    const method = impl[m.member] 
+    const method = impl[m.member]
     if (typeof method !== 'function') {
       // TODO method may be optional
       throw new Error('method not a function')
@@ -150,7 +149,7 @@ class Node {
 
     let result
     if (method.constructor.name === 'AsyncFunction') {
-      result = await method.call(impl, m) 
+      result = await method.call(impl, m)
     } else {
       result = method.call(impl, m)
     }
@@ -175,14 +174,13 @@ class Node {
     this.emit && this.emit(m)
   }
 
-
   /**
-   * 
+   *
    * @param {string} iface - interface name
    * @param {strimg} member - method name
    */
   findMethod (iface, member) {
-    const impl = this.implementations.find(i => i.interface.name === iface)  
+    const impl = this.implementations.find(i => i.interface.name === iface)
     if (!impl) {
       const e = new Error('interface not found')
       e.name = 'org.freedesktop.DBus.Error.UnknownInterface'
@@ -192,7 +190,7 @@ class Node {
     const def = impl.interface.methods.find(def => def.name === member)
     if (!def) {
       const e = new Error('method not defined')
-      e.name = 'org.freedesktop.DBus.Error.UnknownMethod' 
+      e.name = 'org.freedesktop.DBus.Error.UnknownMethod'
       throw e
     }
 
@@ -238,12 +236,12 @@ class Node {
 
   /**
    * Invokes method synchronously. The invoked method must be a synchronous method.
-   * 
+   *
    * @param {object} m
    * @param {string} m.interface - interface name
    * @param {string} m.member - member name
    * @param {TYPE[]} m.body - arguments
-   * @returns {MethodResult} 
+   * @returns {MethodResult}
    */
   invoke (m) {
     const { method, isig, osig } = this.findMethod(m.interface, m.member)
@@ -264,7 +262,7 @@ class Node {
 
     // TODO check signature
     return method(m)
-  } 
+  }
 }
 
 module.exports = Node

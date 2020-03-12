@@ -2,7 +2,7 @@ const path = require('path')
 const expect = require('chai').expect
 
 const {
-  LITTLE, BIG, 
+  LITTLE, BIG,
   TYPE, BYTE, BOOLEAN, INT16, UINT16, INT32, UINT32, INT64, UINT64,
   DOUBLE, UNIX_FD, STRING, OBJECT_PATH, SIGNATURE, ARRAY, STRUCT,
   DICT_ENTRY, VARIANT
@@ -48,7 +48,7 @@ describe(path.basename(__filename), () => {
   it('construct BYTE with {} should throw TypeError', done => {
     expect(() => new BYTE({})).to.throw(TypeError)
     done()
-  }) 
+  })
 
   it('marshalling 255 at buffer[0]', done => {
     const b = new BYTE(255)

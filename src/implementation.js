@@ -17,8 +17,8 @@ const { TYPE } = require('./types')
  */
 
 /**
- * Validates an implementation 
- * 
+ * Validates an implementation
+ *
  * @param {module:interface.NormalizedInterface} iface
  * @param {object} impl - implementation
  */

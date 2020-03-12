@@ -4,11 +4,11 @@ const { split } = require('./signature')
  * An interface object is a JavaScript object literal DEFINING
  * a DBus interface. It is a schema, not an implementation.
  *
- * There are two types defined: `Interface` and `NormalizedInterface`. 
+ * There are two types defined: `Interface` and `NormalizedInterface`.
  * The former is permissive and used in dbus api. The latter is strict
  * and used by dbus client internally.
  *
- * The definition has a hierarchical structure, as shown by the following 
+ * The definition has a hierarchical structure, as shown by the following
  * example:
  *
  * ```JavaScript
@@ -31,7 +31,7 @@ const { split } = require('./signature')
  *   properties: [
  *     {                          // a Property object
  *       name: 'string',
- *       type: 'string',          
+ *       type: 'string',
  *       access: 'read',          // read or readwrite (write not supported)
  *       optional: true
  *     }
@@ -56,13 +56,13 @@ const { split } = require('./signature')
  * and collectively normalize an interface definition, including:
  * - normalizeMethodArg
  * - normalizeMethod
- * - normalizeProperty 
+ * - normalizeProperty
  * - normalizeSignalArg
  * - normalizeSignal
  * - normalizeInterface
  *
  * Each method accepts a type of data object, validates its properties,
- * sets default value for optional propeties, and returns a normalized 
+ * sets default value for optional propeties, and returns a normalized
  * data object.
  *
  * @module

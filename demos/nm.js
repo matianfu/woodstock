@@ -1,16 +1,11 @@
 const path = require('path')
 const EventEmitter = require('events')
-
-
-
 const uuid = require('uuid')
 
-const { BYTE, STRING, ARRAY, DICT_ENTRY, VARIANT } = require('./types')
-
-const DBus = require('./dbus')
+const woodstock = require('../index')
+const { BYTE, STRING, ARRAY, DICT_ENTRY, VARIANT } = woodstock.types
 
 // https://cgit.freedesktop.org/NetworkManager/NetworkManager/tree/examples/python/dbus
-
 
 const describeEnums = (enums, flags) => 
   Object.keys(enums).find(key => enums[key] === flags) || flags
@@ -57,7 +52,7 @@ class NM extends EventEmitter {
   constructor () {
     super()
     this.shadow = null
-    const bus = new DBus()
+    const bus = woodstock()
 
     bus.on('connect', () => {
       bus.AddMatch({
@@ -90,13 +85,23 @@ class NM extends EventEmitter {
             if (err) {
               return
             }
-            bus.GetManagedObjects(
-              'org.freedesktop.NetworkManager',
-              '/org/freedesktop',
-              (err, body) => {
+            bus.GetManagedObjects( {
+                destination: 'org.freedesktop.NetworkManager',
+                path: '/org/freedesktop'
+              }, (err, body) => {
                 if (err) return
 
                 this.shadow = body[0].eval()
+
+                console.log('shadow', Object.keys(this.shadow))
+
+                console.log('shadow networkmanager', this.shadow['/org/freedesktop/NetworkManager'])
+
+                const settings = Object.keys(this.shadow).filter(k => k.startsWith('/org/freedesktop/NetworkManager/Settings/')).map(k => this.shadow[k])
+
+                console.log('initial settings', settings)
+
+
                 bus.on('signal', signal => this.handleSignal(signal))
                 this.bus = bus
 
@@ -108,10 +113,14 @@ class NM extends EventEmitter {
     })
   }
 
+  /**
+   * For InterfacedAdded and interfacedRemoved from ObjectManager, the first (body) argument 
+   * is the path.
+   * For PropertiesChanged from Properties, path is the member of signal.
+   */
   handleSignal (signal) {
     const { path, member, body } = signal
     const iface = signal.interface
-
     if (iface === 'org.freedesktop.DBus.ObjectManager' &&
       member === 'InterfacesAdded') {
       this.interfacesAdded(...body.map(t => t.eval()))
@@ -120,13 +129,20 @@ class NM extends EventEmitter {
       this.interfacesRemoved(...body.map(t => t.eval()))
     } else if (signal.interface === 'org.freedesktop.DBus.Properties' &&
       signal.member === 'PropertiesChanged') {
-      this.propertiesChanged(...body.map(t => t.eval()))
+      this.propertiesChanged(path, ...body.map(t => t.eval()))
     } else {
       console.log('unhandled signal', signal)
     }
   }
 
   interfacesAdded (path, ifacesAndProps) {
+
+    if (path.startsWith('/org/freedesktop/NetworkManager/AccessPoint/')) {
+      console.log('accesspoint added', path, Buffer.from(ifacesAndProps['org.freedesktop.NetworkManager.AccessPoint'].Ssid).toString())
+    } else {
+      console.log('interfaceAdded', path)
+    }
+
     const obj = this.shadow[path]
     if (obj) {
       Object.assign(obj, ifacesAndProps)
@@ -136,6 +152,9 @@ class NM extends EventEmitter {
   }
 
   interfacesRemoved (path, ifaces) {
+
+    console.log('interfaceRemoved', path)
+
     const obj = this.shadow[path]
     if (!obj) {
       console.log(`${path} does not exist`)
@@ -187,7 +206,7 @@ class NM extends EventEmitter {
     const accesspoint = 'org.freedesktop.NetworkManager.AccessPoint'
     const aps = node[wireless].AccessPoints.map(path => this.shadow[path][accesspoint])
 
-    console.log('======')
+    console.log('====== aps')
     aps.forEach(ap => {
       const o = Object.assign({}, ap, {
         Flags: describeBits(NM80211ApFlags, ap.Flags),
@@ -201,7 +220,7 @@ class NM extends EventEmitter {
     })
     console.log('======')
 
-    this.bus.methodCall({
+    this.bus.invoke({
       destination: 'org.freedesktop.NetworkManager',
       path: paths[0],
       interface: 'org.freedesktop.NetworkManager.Device.Wireless',
@@ -281,7 +300,7 @@ class NM extends EventEmitter {
       new DICT_ENTRY([new STRING('ipv6'), ipv6])
     ])
 
-    this.bus.methodCall({
+    this.bus.invoke({
       destination: 'org.freedesktop.NetworkManager',
       path: '/org/freedesktop/NetworkManager/Settings',
       interface: 'org.freedesktop.NetworkManager.Settings',
@@ -302,13 +321,6 @@ class NM extends EventEmitter {
   }
 
   RemoveConnection () {
-  }
-
-  /**
-   * return network manager state
-   */
-  nmstate () {
-    
   }
 }
 

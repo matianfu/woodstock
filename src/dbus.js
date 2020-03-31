@@ -455,6 +455,14 @@ class DBus extends EventEmitter {
         const e = new Error('object not found')
         e.name = 'org.freedesktop.DBus.Error.UnknownObject'
         if (callback) {
+
+          if (typeof callback !== 'function') throw new Error('stack')
+
+          console.log('======')
+          console.log('m', m)
+          console.log('callback', callback)
+          console.log('======')
+
           return process.nextTick(() => callback(e))
         } else {
           throw e
@@ -754,6 +762,7 @@ class DBus extends EventEmitter {
    * @param {string} m.path
    */
   GetManagedObjects ({ destination, path }, callback) {
+    // TODO validation, callback must be function if provided 
     return this.invoke({
       destination,
       path,

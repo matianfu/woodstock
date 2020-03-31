@@ -13,11 +13,11 @@ dbus.addNode('/adv', 'org.freedesktop.DBus.Properties', {
   Release () { }
 })
 
-dbus.addNode('/gatt',
+dbus.addNode('/com/example/gatt',
   'org.freedesktop.DBus.Properties',
   'org.freedesktop.DBus.ObjectManager')
 
-dbus.addNode('/gatt/service001',
+dbus.addNode('/com/example/gatt/service001',
   'org.freedesktop.DBus.Properties', {
     interface: 'org.bluez.GattService1',
     UUID: new STRING('60000000-0182-406c-9221-0a6680bd0943'),
@@ -27,15 +27,15 @@ dbus.addNode('/gatt/service001',
     //
     // Device: new OBJECT_PATH('/org/bluez/hci0'),
     // Characteristics: new ARRAY([
-    //   new OBJECT_PATH('/gatt/service001/char001')
+    //   new OBJECT_PATH('/com/example/gatt/service001/char001')
     // ])
   })
 
-dbus.addNode('/gatt/service001/char001',
+dbus.addNode('/com/example/gatt/service001/char001',
   'org.freedesktop.DBus.Properties', {
     interface: 'org.bluez.GattCharacteristic1',
     UUID: new STRING('60000002-0182-406c-9221-0a6680bd0943'),
-    Service: new OBJECT_PATH('/gatt/service001'),
+    Service: new OBJECT_PATH('/com/example/gatt/service001'),
     Value: new ARRAY('ay', [new BYTE('f'), new BYTE('o'), new BYTE('o')]),
     Flags: new ARRAY('as', [new STRING('read'), new STRING('notify')]),
     ReadValue (m) {
@@ -49,11 +49,11 @@ dbus.addNode('/gatt/service001/char001',
     StopNotify () { }
   })
 
-dbus.addNode('/gatt/service001/char002',
+dbus.addNode('/com/example/gatt/service001/char002',
   'org.freedesktop.DBus.Properties', {
     interface: 'org.bluez.GattCharacteristic1',
     UUID: new STRING('60000003-0182-406c-9221-0a6680bd0943'),
-    Service: new OBJECT_PATH('/gatt/service001'),
+    Service: new OBJECT_PATH('/com/example/gatt/service001'),
     Value: new ARRAY('ay', [new BYTE('b'), new BYTE('a'), new BYTE('r')]),
     Flags: new ARRAY('as', [new STRING('read'), new STRING('write')]),
     ReadValue (m) { return this.Value },
@@ -69,6 +69,39 @@ dbus.addNode('/gatt/service001/char002',
         sender: m.sender
       })
     },
+    StartNotify () { },
+    StopNotify () { }
+  })
+
+dbus.addNode('/com/example/gatt/service002',
+  'org.freedesktop.DBus.Properties', {
+    interface: 'org.bluez.GattService1',
+    UUID: new STRING('70000000-0182-406c-9221-0a6680bd0943'),
+    Primary: new BOOLEAN(true)
+  })
+
+dbus.addNode('/com/example/gatt/service002/char001',
+  'org.freedesktop.DBus.Properties', {
+    interface: 'org.bluez.GattCharacteristic1',
+    UUID: new STRING('70000002-0182-406c-9221-0a6680bd0943'),
+    Service: new OBJECT_PATH('/com/example/gatt/service002'),
+    Value: new ARRAY('ay', [new BYTE('f'), new BYTE('o'), new BYTE('o')]),
+    Flags: new ARRAY('as', [new STRING('read'), new STRING('notify')]),
+    ReadValue (m) { return this.Value },
+    WriteValue (m) { console.log(m) },
+    StartNotify () { },
+    StopNotify () { }
+  })
+
+dbus.addNode('/com/example/gatt/service002/char002',
+  'org.freedesktop.DBus.Properties', {
+    interface: 'org.bluez.GattCharacteristic1',
+    UUID: new STRING('70000003-0182-406c-9221-0a6680bd0943'),
+    Service: new OBJECT_PATH('/com/example/gatt/service002'),
+    Value: new ARRAY('ay', [new BYTE('b'), new BYTE('a'), new BYTE('r')]),
+    Flags: new ARRAY('as', [new STRING('read'), new STRING('write')]),
+    ReadValue (m) { },
+    WriteValue (m) { },
     StartNotify () { },
     StopNotify () { }
   })
@@ -105,26 +138,26 @@ dbus.on('connect', () => {
           member: 'RegisterApplication',
           signature: 'oa{sv}',
           body: [
-            new OBJECT_PATH('/gatt'),
+            new OBJECT_PATH('/com/example/gatt'),
             new ARRAY('a{sv}')
           ]
         }, (err, result) => {
           console.log('application registered')
           console.log(err, result)
-
-          let count = 0
-
-          setInterval(() => {
-            dbus.Set({
-              path: '/gatt/service001/char001',
-              interfaceName: 'org.bluez.GattCharacteristic1',
-              propertyName: 'Value',
-              value: new ARRAY('ay', [new BYTE(count++)])
-            })
-
-            if (count >= 256) count = 0
-          }, 1000)
         })
+
+        let count = 0
+
+        setInterval(() => {
+          dbus.Set({
+            path: '/com/example/gatt/service001/char001',
+            interfaceName: 'org.bluez.GattCharacteristic1',
+            propertyName: 'Value',
+            value: new ARRAY('ay', [new BYTE(count++)])
+          })
+
+          if (count >= 256) count = 0
+        }, 1000)
       })
     })
   })
@@ -132,11 +165,6 @@ dbus.on('connect', () => {
 
 dbus.on('signal', signal => {
   if (!signal.initiator && !signal.sender) {
-    const body = signal.body.map(arg => arg.eval())
-    console.dir(Object.assign({}, signal, { body }), { depth: 5 })
-  } 
-
-  if (signal.initiator && !signal.sender) {
     const body = signal.body.map(arg => arg.eval())
     console.dir(Object.assign({}, signal, { body }), { depth: 5 })
   }

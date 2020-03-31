@@ -1,6 +1,6 @@
 {
   "name": "@matianfu/woodstock",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Yet Another DBus Implementation",
   "main": "index.js",
   "directories": {
